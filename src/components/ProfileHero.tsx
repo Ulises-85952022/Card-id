@@ -18,6 +18,7 @@ import { downloadVCard } from '../utils/vcard';
 import { AvailabilityStatus } from '../types';
 import { AvatarModal } from './AvatarModal';
 import { CompanyLogoModal } from './CompanyLogoModal';
+import { compressImage } from '../utils/imageCompressor';
 
 interface ProfileHeroProps {
   onOpenQr: () => void;
@@ -42,10 +43,24 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   // Initialize with persisted avatar if available or local public file
   const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('ammega_user_avatar');
+      return localStorage.getItem('ammega_user_avatar') || profile.avatarUrl || null;
     }
-    return null;
+    return profile.avatarUrl || null;
   });
+
+  // Sync avatar state whenever profile.avatarUrl updates from Cloud Firestore
+  useEffect(() => {
+    if (profile.avatarUrl) {
+      setCustomAvatarUrl(profile.avatarUrl);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('ammega_user_avatar', profile.avatarUrl);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, [profile.avatarUrl]);
 
   // Candidates for avatar: checks local files (/avatar.png, etc.) then fallback
   const avatarCandidates = [
@@ -59,22 +74,19 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
 
   // Clipboard paste support: if user copies image and presses Ctrl+V, set as avatar
   useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
+    const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.startsWith('image/')) {
           const blob = items[i].getAsFile();
           if (blob) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target?.result) {
-                const dataUrl = event.target.result as string;
-                saveAvatar(dataUrl);
-                showNotification('Foto pegada desde portapapeles');
-              }
-            };
-            reader.readAsDataURL(blob);
+            try {
+              await saveAvatar(blob);
+              showNotification('Foto pegada y guardada con éxito');
+            } catch (err) {
+              console.error('Error pasting image:', err);
+            }
           }
           break;
         }
@@ -89,23 +101,46 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     setTimeout(() => setAvatarToast(null), 3500);
   };
 
-  const saveAvatar = (dataUrl: string) => {
-    setCustomAvatarUrl(dataUrl);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('ammega_user_avatar', dataUrl);
-      } catch {
-        // quota handled safely
+  const saveAvatar = async (dataUrlOrFile: string | File) => {
+    try {
+      // Compress and optimize image to ~30-50KB so it never exceeds LocalStorage or Firestore limits
+      const optimized = await compressImage(dataUrlOrFile, {
+        maxWidth: 440,
+        maxHeight: 440,
+        quality: 0.85,
+      });
+
+      setCustomAvatarUrl(optimized);
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('ammega_user_avatar', optimized);
+        } catch (e) {
+          console.warn('LocalStorage error saving avatar:', e);
+        }
+      }
+
+      // Update card profile in context & Firestore cloud database
+      updateProfile({ avatarUrl: optimized });
+      showNotification('Foto de perfil guardada permanentemente');
+    } catch (err) {
+      console.warn('Error saving compressed avatar, fallback to raw:', err);
+      if (typeof dataUrlOrFile === 'string') {
+        setCustomAvatarUrl(dataUrlOrFile);
+        updateProfile({ avatarUrl: dataUrlOrFile });
+        showNotification('Foto de perfil actualizada');
       }
     }
-    showNotification('Foto de perfil actualizada con éxito');
   };
 
   const resetAvatar = () => {
     setCustomAvatarUrl(null);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('ammega_user_avatar');
+      try {
+        localStorage.removeItem('ammega_user_avatar');
+      } catch (e) {}
     }
+    updateProfile({ avatarUrl: '' });
     showNotification('Foto restablecida');
   };
 
@@ -125,22 +160,16 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
-  const handleAvatarFileDrop = (e: React.DragEvent) => {
+  const handleAvatarFileDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsAvatarDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          saveAvatar(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      await saveAvatar(file);
     }
   };
 
-  const currentAvatar = customAvatarUrl || avatarCandidates[avatarIndex];
+  const currentAvatar = profile.avatarUrl || customAvatarUrl || avatarCandidates[avatarIndex];
 
   return (
     <div className="flex flex-col">

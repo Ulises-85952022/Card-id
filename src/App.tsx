@@ -11,6 +11,7 @@ import { ShareModal } from './components/ShareModal';
 import { QuoteModal } from './components/QuoteModal';
 import { AdminModal } from './components/AdminModal';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
+import { CardParticles } from './components/CardParticles';
 import { Settings } from 'lucide-react';
 
 function AppContent() {
@@ -73,29 +74,35 @@ function AppContent() {
       {/* Main Card Shell */}
       <main
         id="digital-card-container"
-        className="relative z-10 w-full max-w-[440px] bg-[#0f1d24]/90 backdrop-blur-2xl border border-[rgba(0,168,181,0.22)] rounded-[28px] p-5 sm:p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7),0_0_35px_rgba(0,168,181,0.2)] transition-all duration-300"
+        className="relative z-10 w-full max-w-[440px] bg-[#0f1d24]/90 backdrop-blur-2xl border border-[rgba(0,168,181,0.22)] rounded-[28px] p-5 sm:p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7),0_0_35px_rgba(0,168,181,0.2)] transition-all duration-300 overflow-hidden"
       >
-        {/* Profile Hero section (Header, Avatar, Name, Role, Actions, Save Contact) */}
-        <ProfileHero
-          onOpenQr={() => setIsQrOpen(true)}
-          onOpenShare={() => setIsShareOpen(true)}
-          onQuickWhatsApp={handleQuickWhatsApp}
-        />
+        {/* Subtle Ambient Particle Animation */}
+        <CardParticles />
 
-        {/* Tab Navigation */}
-        <TabsNav activeTab={activeTab} onChangeTab={setActiveTab} />
-
-        {/* Tab Content */}
-        {activeTab === 'contacto' && <ContactTab />}
-        {(activeTab === 'proyectos' || activeTab === 'marcas') && (
-          <BrandsTab onOpenQuote={handleOpenQuote} />
-        )}
-        {(activeTab === 'web' || activeTab === 'grupo') && (
-          <GroupTab
-            onOpenQuote={handleOpenQuote}
-            onOpenAdmin={() => openAdminWithBrand(undefined)}
+        {/* Foreground Content Shell */}
+        <div className="relative z-10">
+          {/* Profile Hero section (Header, Avatar, Name, Role, Actions, Save Contact) */}
+          <ProfileHero
+            onOpenQr={() => setIsQrOpen(true)}
+            onOpenShare={() => setIsShareOpen(true)}
+            onQuickWhatsApp={handleQuickWhatsApp}
           />
-        )}
+
+          {/* Tab Navigation */}
+          <TabsNav activeTab={activeTab} onChangeTab={setActiveTab} />
+
+          {/* Tab Content */}
+          {activeTab === 'contacto' && <ContactTab />}
+          {(activeTab === 'proyectos' || activeTab === 'marcas') && (
+            <BrandsTab onOpenQuote={handleOpenQuote} />
+          )}
+          {(activeTab === 'web' || activeTab === 'grupo') && (
+            <GroupTab
+              onOpenQuote={handleOpenQuote}
+              onOpenAdmin={() => openAdminWithBrand(undefined)}
+            />
+          )}
+        </div>
       </main>
 
       {/* Floating WhatsApp Action Button */}

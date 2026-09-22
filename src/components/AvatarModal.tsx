@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Check, RefreshCw, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { X, Upload, Check, RefreshCw, Image as ImageIcon, Sparkles, Loader2 } from 'lucide-react';
+import { compressImage } from '../utils/imageCompressor';
 
 interface AvatarModalProps {
   isOpen: boolean;
@@ -19,19 +20,33 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [filterStyle, setFilterStyle] = useState<'bw' | 'normal'>('bw');
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setPreviewUrl(e.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsProcessing(true);
+      const optimized = await compressImage(file, {
+        maxWidth: 480,
+        maxHeight: 480,
+        quality: 0.88,
+      });
+      setPreviewUrl(optimized);
+    } catch (err) {
+      console.warn('Error optimizing image preview:', err);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setPreviewUrl(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,10 +65,24 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (previewUrl) {
-      onSaveAvatar(previewUrl);
-      onClose();
+      setIsProcessing(true);
+      try {
+        const finalAsset = await compressImage(previewUrl, {
+          maxWidth: 440,
+          maxHeight: 440,
+          quality: 0.85,
+          grayscale: filterStyle === 'bw',
+        });
+        onSaveAvatar(finalAsset);
+        onClose();
+      } catch (err) {
+        onSaveAvatar(previewUrl);
+        onClose();
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -163,10 +192,20 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-1.5"
+                disabled={isProcessing}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                <Check className="w-4 h-4" />
-                Aplicar como Perfil
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Optimizando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Aplicar como Perfil
+                  </>
+                )}
               </button>
               <button
                 type="button"

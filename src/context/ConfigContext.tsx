@@ -140,21 +140,69 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Fetch from Firestore
       const cardFromCloud = await getCardBySlug(targetSlug);
       if (cardFromCloud) {
-        setCurrentCard(cardFromCloud);
-        // Save local backup
-        localStorage.setItem(STORAGE_KEY_PREFIX + cardFromCloud.slug, JSON.stringify(cardFromCloud));
+        let finalCard = cardFromCloud;
+
+        // Check if local backup had a saved avatar not yet synced to cloud
+        try {
+          const localBackup = localStorage.getItem(STORAGE_KEY_PREFIX + targetSlug);
+          if (localBackup) {
+            const parsed = JSON.parse(localBackup);
+            if (parsed.profile?.avatarUrl && !cardFromCloud.profile?.avatarUrl) {
+              finalCard = {
+                ...cardFromCloud,
+                profile: { ...cardFromCloud.profile, avatarUrl: parsed.profile.avatarUrl },
+              };
+              saveCardToCloud(finalCard).catch(() => {});
+            }
+          }
+
+          // Check standalone avatar cache
+          const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
+          if (standaloneAvatar && !finalCard.profile.avatarUrl) {
+            finalCard = {
+              ...finalCard,
+              profile: { ...finalCard.profile, avatarUrl: standaloneAvatar },
+            };
+            saveCardToCloud(finalCard).catch(() => {});
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+
+        setCurrentCard(finalCard);
+
+        // Keep local backups in sync
+        try {
+          localStorage.setItem(STORAGE_KEY_PREFIX + finalCard.slug, JSON.stringify(finalCard));
+          if (finalCard.profile.avatarUrl) {
+            localStorage.setItem('ammega_user_avatar', finalCard.profile.avatarUrl);
+          }
+        } catch (e) {
+          // ignore
+        }
       } else {
         // Check local storage backup
         const local = localStorage.getItem(STORAGE_KEY_PREFIX + targetSlug);
         if (local) {
           try {
-            setCurrentCard(JSON.parse(local));
+            const parsedCard = JSON.parse(local);
+            setCurrentCard(parsedCard);
+            // Sync local card to cloud
+            saveCardToCloud(parsedCard).catch(() => {});
           } catch (e) {
             setCurrentCard(getDefaultAdminCard());
           }
         } else {
           // If neither exists, load default admin
           const defaultAdmin = getDefaultAdminCard();
+          // Check if standalone avatar exists to restore
+          try {
+            const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
+            if (standaloneAvatar) {
+              defaultAdmin.profile.avatarUrl = standaloneAvatar;
+            }
+          } catch (e) {}
+
           setCurrentCard(defaultAdmin);
           // Seed cloud with default admin card if target was admin
           if (targetSlug === 'ulises-hernandez') {
@@ -164,7 +212,17 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     } catch (err) {
       console.warn('Error in loadActiveCard:', err);
-      setCurrentCard(getDefaultAdminCard());
+      // Fallback to local storage if network failed
+      try {
+        const local = localStorage.getItem(STORAGE_KEY_PREFIX + targetSlug);
+        if (local) {
+          setCurrentCard(JSON.parse(local));
+        } else {
+          setCurrentCard(getDefaultAdminCard());
+        }
+      } catch {
+        setCurrentCard(getDefaultAdminCard());
+      }
     } finally {
       setIsLoading(false);
     }
@@ -190,22 +248,51 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const profile = currentCard.profile;
   const brands = currentCard.brands;
 
-  // Update current profile in state
+  // Update current profile in state, localStorage and auto-sync to Firestore
   const updateProfile = (partial: Partial<UserProfile>) => {
-    setCurrentCard((prev) => ({
-      ...prev,
-      profile: { ...prev.profile, ...partial },
-      updatedAt: new Date().toISOString(),
-    }));
+    setCurrentCard((prev) => {
+      const updated: DigitalCard = {
+        ...prev,
+        profile: { ...prev.profile, ...partial },
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY_PREFIX + updated.slug, JSON.stringify(updated));
+        if (partial.avatarUrl !== undefined) {
+          if (partial.avatarUrl) {
+            localStorage.setItem('ammega_user_avatar', partial.avatarUrl);
+          } else {
+            localStorage.removeItem('ammega_user_avatar');
+          }
+        }
+      } catch (e) {
+        console.warn('LocalStorage quota warning:', e);
+      }
+
+      // Auto-sync in background to Firestore cloud
+      saveCardToCloud(updated).catch((err) => {
+        console.warn('Auto-save card to Firestore warning:', err);
+      });
+
+      return updated;
+    });
   };
 
-  // Update brand in state
+  // Update brand in state, localStorage and auto-sync
   const updateBrand = (brandId: string, partial: Partial<BrandInfo>) => {
-    setCurrentCard((prev) => ({
-      ...prev,
-      brands: prev.brands.map((b) => (b.id === brandId ? { ...b, ...partial } : b)),
-      updatedAt: new Date().toISOString(),
-    }));
+    setCurrentCard((prev) => {
+      const updated: DigitalCard = {
+        ...prev,
+        brands: prev.brands.map((b) => (b.id === brandId ? { ...b, ...partial } : b)),
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY_PREFIX + updated.slug, JSON.stringify(updated));
+      } catch (e) {}
+      saveCardToCloud(updated).catch(() => {});
+      return updated;
+    });
   };
 
   // Add subcategory in state
