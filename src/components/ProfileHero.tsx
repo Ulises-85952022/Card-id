@@ -159,8 +159,12 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
               alt={profile.company || 'Logotipo'}
               className="h-6 sm:h-7 w-auto max-w-[130px] object-contain"
             />
-          ) : (
+          ) : profile.company && profile.company.toLowerCase().includes('ammega') ? (
             <SmartBrandLogo brandId="ammega" className="h-6 sm:h-7 w-auto" whiteBg={true} />
+          ) : (
+            <span className="text-xs font-black text-slate-900 tracking-wider px-1.5 uppercase">
+              {profile.company || 'EMPRESA'}
+            </span>
           )}
 
           {/* Hover indicator icon */}
