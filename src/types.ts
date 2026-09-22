@@ -27,6 +27,7 @@ export interface UserProfile {
   title: string;
   division: string;
   company: string;
+  companyLogoUrl?: string;
   companyTagline?: string;
   companyDescription?: string;
   companyWebsite?: string;

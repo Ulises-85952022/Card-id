@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppConfig } from '../context/ConfigContext';
+import { BrandInfo } from '../types';
 import { SmartBrandLogo, BrandLogoId } from './logos/SmartBrandLogo';
 import {
   ExternalLink,
@@ -25,11 +26,20 @@ export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
     setExpandedBrand((prev) => (prev === id ? null : id));
   };
 
-  const renderLogo = (id: string) => {
-    if (id === 'ammeraal' || id === 'megadyne' || id === 'jason') {
-      return <SmartBrandLogo brandId={id as BrandLogoId} className="h-6" whiteBg={true} />;
+  const renderLogo = (brand: BrandInfo) => {
+    if (brand.logoUrl) {
+      return (
+        <img
+          src={brand.logoUrl}
+          alt={brand.name}
+          className="h-6 w-auto max-w-[110px] object-contain"
+        />
+      );
     }
-    return null;
+    if (brand.id === 'ammeraal' || brand.id === 'megadyne' || brand.id === 'jason' || brand.id === 'ammega') {
+      return <SmartBrandLogo brandId={brand.id as BrandLogoId} className="h-6" whiteBg={true} />;
+    }
+    return <span className="text-xs font-bold text-slate-800 tracking-tight">{brand.name}</span>;
   };
 
   const sectionTitle = profile.projectsSectionTitle || 'Proyectos';
@@ -75,7 +85,7 @@ export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
                 {/* Logo in white pill */}
                 <div className="flex items-center gap-3">
                   <div className="bg-white rounded-xl py-1 px-2.5 shadow-sm inline-flex items-center justify-center border border-white/20">
-                    {renderLogo(brand.id)}
+                    {renderLogo(brand)}
                   </div>
                   <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
                     {brand.categoryPill}

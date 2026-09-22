@@ -17,6 +17,7 @@ import { SmartBrandLogo } from './logos/SmartBrandLogo';
 import { downloadVCard } from '../utils/vcard';
 import { AvailabilityStatus } from '../types';
 import { AvatarModal } from './AvatarModal';
+import { CompanyLogoModal } from './CompanyLogoModal';
 
 interface ProfileHeroProps {
   onOpenQr: () => void;
@@ -34,6 +35,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   const [status, setStatus] = useState<AvailabilityStatus>(profile.status || 'disponible');
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isAvatarDragOver, setIsAvatarDragOver] = useState(false);
   const [avatarToast, setAvatarToast] = useState<string | null>(null);
 
@@ -107,6 +109,16 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     showNotification('Foto restablecida');
   };
 
+  const handleSaveCompanyLogo = (logoUrl: string) => {
+    updateProfile({ companyLogoUrl: logoUrl });
+    showNotification('Logotipo de empresa actualizado');
+  };
+
+  const handleResetCompanyLogo = () => {
+    updateProfile({ companyLogoUrl: '' });
+    showNotification('Logotipo restablecido al predeterminado');
+  };
+
   const handleSaveContact = () => {
     downloadVCard(profile);
     setSavedSuccess(true);
@@ -134,10 +146,28 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     <div className="flex flex-col">
       {/* Top Header Bar */}
       <header className="flex items-center justify-between mb-5">
-        {/* Left: Brand Capsule */}
-        <div className="bg-white py-2 px-4 rounded-full shadow-lg shadow-black/40 flex items-center justify-center border border-white/30 hover:scale-[1.02] transition-transform">
-          <SmartBrandLogo brandId="ammega" className="h-6 sm:h-7 w-auto" whiteBg={true} />
-        </div>
+        {/* Left: Brand / Company Logo Capsule */}
+        <button
+          type="button"
+          onClick={() => setIsLogoModalOpen(true)}
+          className="group relative bg-white py-2 px-4 rounded-full shadow-lg shadow-black/40 flex items-center justify-center border border-white/30 hover:scale-[1.03] transition-all cursor-pointer"
+          title="Haz clic para cambiar el logotipo de la empresa"
+        >
+          {profile.companyLogoUrl ? (
+            <img
+              src={profile.companyLogoUrl}
+              alt={profile.company || 'Logotipo'}
+              className="h-6 sm:h-7 w-auto max-w-[130px] object-contain"
+            />
+          ) : (
+            <SmartBrandLogo brandId="ammega" className="h-6 sm:h-7 w-auto" whiteBg={true} />
+          )}
+
+          {/* Hover indicator icon */}
+          <span className="absolute -bottom-1 -right-1 opacity-0 group-hover:opacity-100 bg-cyan-500 text-slate-950 p-1 rounded-full text-[9px] font-bold shadow transition-opacity flex items-center justify-center">
+            <Camera className="w-2.5 h-2.5" />
+          </span>
+        </button>
 
         {/* Right: Status Badge with pulse dot & toggle */}
         <div className="relative">
@@ -415,6 +445,16 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         currentAvatar={currentAvatar}
         onSaveAvatar={saveAvatar}
         onResetAvatar={resetAvatar}
+      />
+
+      {/* Company Logo Management Modal */}
+      <CompanyLogoModal
+        isOpen={isLogoModalOpen}
+        onClose={() => setIsLogoModalOpen(false)}
+        currentLogoUrl={profile.companyLogoUrl}
+        companyName={profile.company}
+        onSaveLogo={handleSaveCompanyLogo}
+        onResetLogo={handleResetCompanyLogo}
       />
     </div>
   );

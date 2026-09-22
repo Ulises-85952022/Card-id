@@ -637,6 +637,82 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 resize-none"
                     />
                   </div>
+
+                  {/* Logotipo de la Empresa */}
+                  <div className="space-y-2 sm:col-span-2 pt-2 border-t border-cyan-500/20">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Logotipo Principal de la Empresa</span>
+                      </label>
+                      {profileForm.companyLogoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setProfileForm({ ...profileForm, companyLogoUrl: '' })}
+                          className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline"
+                        >
+                          Quitar logo (usar predeterminado)
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#0a151a] p-3 rounded-xl border border-white/15">
+                      <div className="bg-white py-1.5 px-3 rounded-full flex items-center justify-center min-h-[38px] min-w-[120px] border border-white/30 flex-shrink-0 shadow-sm">
+                        {profileForm.companyLogoUrl ? (
+                          <img
+                            src={profileForm.companyLogoUrl}
+                            alt="Vista previa logo"
+                            className="h-6 max-w-[120px] object-contain"
+                          />
+                        ) : (
+                          <span className="text-[11px] font-bold text-slate-800">
+                            {profileForm.company || 'AMMEGA'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 w-full space-y-1.5">
+                        <input
+                          type="url"
+                          value={profileForm.companyLogoUrl || ''}
+                          onChange={(e) =>
+                            setProfileForm({ ...profileForm, companyLogoUrl: e.target.value })
+                          }
+                          placeholder="Pega aquí la URL de la imagen del logo..."
+                          className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400"
+                        />
+                        <div className="flex items-center gap-2">
+                          <label className="py-1 px-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-[11px] font-semibold cursor-pointer inline-flex items-center gap-1.5 transition-all">
+                            <Upload className="w-3 h-3" />
+                            <span>Subir archivo (PNG, SVG, JPG)</span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (ev) => {
+                                    if (ev.target?.result) {
+                                      setProfileForm({
+                                        ...profileForm,
+                                        companyLogoUrl: ev.target.result as string,
+                                      });
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                          <span className="text-[10px] text-slate-400">
+                            Recomendado: Fondo transparente
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -742,28 +818,78 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               </div>
 
-              {/* Header and Add Button */}
-              <div className="flex items-center justify-between pt-1">
-                <div>
-                  <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>{selectedBrand.name}</span>
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {subcategories.length} subcategorías registradas
-                  </p>
+              {/* Brand Header, Logo and Add Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white rounded-xl py-1 px-2.5 shadow-sm inline-flex items-center justify-center border border-white/20 min-h-[34px] min-w-[90px]">
+                    {selectedBrand.logoUrl ? (
+                      <img
+                        src={selectedBrand.logoUrl}
+                        alt={selectedBrand.name}
+                        className="h-5 max-w-[100px] object-contain"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-slate-800">
+                        {selectedBrand.name.split(' ')[0]}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{selectedBrand.name}</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      {subcategories.length} subcategorías registradas
+                    </p>
+                  </div>
                 </div>
 
-                {!isFormOpen && (
-                  <button
-                    type="button"
-                    onClick={handleOpenAddForm}
-                    className="py-1.5 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center gap-1 transition-all"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Nueva Subcategoría</span>
-                  </button>
-                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="py-1 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/15 text-xs font-medium cursor-pointer flex items-center gap-1">
+                    <Camera className="w-3 h-3 text-cyan-400" />
+                    <span>Cambiar Logo</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (ev.target?.result) {
+                              updateBrand(selectedBrand.id, { logoUrl: ev.target.result as string });
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {selectedBrand.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => updateBrand(selectedBrand.id, { logoUrl: '' })}
+                      className="py-1 px-2 rounded-xl text-[10px] text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+                      title="Restablecer logo de la marca"
+                    >
+                      Restablecer
+                    </button>
+                  )}
+
+                  {!isFormOpen && (
+                    <button
+                      type="button"
+                      onClick={handleOpenAddForm}
+                      className="py-1 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold flex items-center gap-1 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Nueva Subcategoría</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Subcategory form */}
