@@ -108,6 +108,8 @@ export async function saveCardToCloud(card: DigitalCard): Promise<{ success: boo
       title: card.profile?.title || '',
       division: card.profile?.division || '',
       company: card.profile?.company || 'AMMEGA Group',
+      companyDescription: card.profile?.companyDescription || '',
+      companyWebsite: card.profile?.companyWebsite || '',
       email: card.profile?.email || '',
       phone: card.profile?.phoneDisplay || card.profile?.phoneRaw || '',
       whatsappNumber: card.profile?.whatsappNumber || '',

@@ -21,10 +21,13 @@ import {
   Users,
   Cloud,
   ChevronDown,
+  Camera,
+  Sparkles,
 } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
-import { BrandSubcategory, DigitalCard } from '../types';
+import { BrandSubcategory, DigitalCard, ScannedCardData } from '../types';
 import { CardsDirectoryTab } from './admin/CardsDirectoryTab';
+import { BusinessCardScannerModal } from './BusinessCardScannerModal';
 
 interface AdminModalProps {
   isOpen: boolean;
@@ -74,6 +77,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   // Profile form state (synced with active profile)
   const [profileForm, setProfileForm] = useState(profile);
+
+  // Scanner modal state
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  const handleApplyScannedData = (data: ScannedCardData) => {
+    setProfileForm((prev) => ({
+      ...prev,
+      name: data.name || prev.name,
+      title: data.title || prev.title,
+      company: data.company || prev.company,
+      companyDescription: data.companyDescription || prev.companyDescription,
+      division: data.division || prev.division,
+      email: data.email || prev.email,
+      phoneDisplay: data.phone || prev.phoneDisplay,
+      phoneRaw: data.phone ? data.phone.replace(/[^\d+]/g, '') : prev.phoneRaw,
+      whatsappNumber: data.whatsapp ? data.whatsapp.replace(/\D/g, '') : prev.whatsappNumber,
+      companyWebsite: data.website || prev.companyWebsite,
+      corporateUrl: data.website || prev.corporateUrl,
+      location: data.location || prev.location,
+    }));
+    showToast('¡Datos de tarjeta extraídos y aplicados con éxito!');
+  };
 
   // Status message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -371,7 +396,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Marcas y Catálogo</span>
+            <span>{profileForm.projectsSectionTitle || 'Proyectos y Líneas'}</span>
             <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded-full">
               {subcategories.length}
             </span>
@@ -406,16 +431,38 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
           {/* TAB 2: DATOS DEL PERFIL */}
           {activeTab === 'perfil' && (
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/20 flex items-center justify-between text-xs">
+            <div className="space-y-4">
+              {/* Business Card Scanner AI Banner */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900/60 to-teal-950/60 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
                 <div>
-                  <span className="text-slate-400">Editando perfil de: </span>
-                  <span className="font-bold text-white">{currentCard.profile.name}</span>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-cyan-400" />
+                    <span>Escanear Tarjeta de Presentación Física (IA)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    Toma una foto a la tarjeta física para autocompletar nombre, empresa, puesto, web y teléfono.
+                  </p>
                 </div>
-                <span className="text-cyan-400 font-mono text-[11px]">
-                  Enlace: ?card={currentCard.slug}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsScannerOpen(true)}
+                  className="py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all whitespace-nowrap"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Escanear Tarjeta</span>
+                </button>
               </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/20 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-slate-400">Editando perfil de: </span>
+                    <span className="font-bold text-white">{currentCard.profile.name}</span>
+                  </div>
+                  <span className="text-cyan-400 font-mono text-[11px]">
+                    Enlace: ?card={currentCard.slug}
+                  </span>
+                </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -506,9 +553,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <label className="text-xs font-semibold text-slate-300">
-                    Correo Directo
+                    Correo Electrónico Único *
                   </label>
                   <input
                     type="email"
@@ -516,22 +563,80 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     onChange={(e) =>
                       setProfileForm({ ...profileForm, email: e.target.value })
                     }
+                    placeholder="contacto@empresa.com"
                     className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                    required
                   />
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">
-                    Correo Corporativo AMMEGA
-                  </label>
-                  <input
-                    type="email"
-                    value={profileForm.workEmail}
-                    onChange={(e) =>
-                      setProfileForm({ ...profileForm, workEmail: e.target.value })
-                    }
-                    className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
-                  />
+              {/* Ficha Empresarial y Presencia Web (Genérico) */}
+              <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 space-y-3">
+                <div className="text-xs font-bold text-cyan-300 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Ficha Empresarial y Presencia Web</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Página Web Oficial (URL)
+                    </label>
+                    <input
+                      type="url"
+                      value={profileForm.companyWebsite || ''}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, companyWebsite: e.target.value })
+                      }
+                      placeholder="https://empresa.com"
+                      className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Título de Sección de Proyectos
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.projectsSectionTitle || 'Proyectos'}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, projectsSectionTitle: e.target.value })
+                      }
+                      placeholder="Proyectos (o Marcas / Soluciones)"
+                      className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-semibold text-slate-300">
+                      ¿A qué se dedican? (Giro y Actividad de la Empresa)
+                    </label>
+                    <textarea
+                      value={profileForm.companyDescription || ''}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, companyDescription: e.target.value })
+                      }
+                      rows={2}
+                      placeholder="Ej: Fabricación de bandas transportadoras inteligentes, correas de transmisión y componentes de potencia para la industria pesada..."
+                      className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Resumen del Sitio Web y Catálogo
+                    </label>
+                    <textarea
+                      value={profileForm.websiteSummary || ''}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, websiteSummary: e.target.value })
+                      }
+                      rows={2}
+                      placeholder="Ej: Catálogo interactivo de productos, calculadoras de ingeniería, fichas técnicas y asistencia técnica..."
+                      className="w-full bg-[#0a151a] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 resize-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -605,7 +710,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </button>
               </div>
             </form>
-          )}
+          </div>
+        )}
 
           {/* TAB 3: MARCAS Y SUBCATEGORÍAS */}
           {activeTab === 'subcategorias' && (
@@ -942,6 +1048,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Business Card Scanner Modal */}
+        <BusinessCardScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onApplyData={handleApplyScannedData}
+        />
       </div>
     </div>
   );

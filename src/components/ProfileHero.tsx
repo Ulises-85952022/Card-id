@@ -9,6 +9,8 @@ import {
   Camera,
   Check,
   Sparkles,
+  Building2,
+  ExternalLink,
 } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
 import { SmartBrandLogo } from './logos/SmartBrandLogo';
@@ -275,15 +277,15 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         </div>
 
         {/* User Company Subtext */}
-        <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 font-medium">
-          <Globe className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
+        <div className="flex items-center justify-center gap-1.5 text-xs text-slate-300 font-semibold mb-1">
+          <Building2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
           <span className="truncate">
-            {profile.company} · {profile.division}
+            {profile.company}{profile.division ? ` · ${profile.division}` : ''}
           </span>
         </div>
       </section>
 
-      {/* Quick Action Grid (3 items: WhatsApp, Llamar, Portal) matching Image 1.png */}
+      {/* Quick Action Grid (3 items: WhatsApp, Llamar, Web) */}
       <div className="grid grid-cols-3 gap-2.5 mb-3.5">
         {/* WhatsApp */}
         <button
@@ -314,9 +316,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
           </span>
         </a>
 
-        {/* Portal */}
+        {/* Web */}
         <a
-          href={profile.brandsUrl}
+          href={profile.companyWebsite || profile.corporateUrl || profile.brandsUrl || '#'}
           target="_blank"
           rel="noopener noreferrer"
           className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white/[0.04] hover:bg-teal-500/15 border border-white/[0.08] hover:border-teal-500/35 transition-all active:scale-[0.97]"
@@ -325,13 +327,13 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <Globe className="w-4.5 h-4.5" />
           </div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-teal-300">
-            Portal
+            Web
           </span>
         </a>
       </div>
 
-      {/* Save Contact & Quick Share Row matching Image 1.png */}
-      <div className="flex items-center gap-2 mb-4">
+      {/* Save Contact & Quick Share Row */}
+      <div className="flex items-center gap-2 mb-3">
         {/* Main CTA: Guardar en Contactos */}
         <button
           id="btn-guardar-contacto"
@@ -373,6 +375,37 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         >
           <Share2 className="w-5 h-5" />
         </button>
+      </div>
+
+      {/* Ficha Corporativa: Nombre de la Empresa y a qué se dedican */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-br from-cyan-950/25 via-slate-900/40 to-slate-950/40 border border-cyan-500/20 text-left mb-4 shadow-sm">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Building2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+            <span className="text-xs font-bold text-white uppercase tracking-wider truncate">
+              {profile.company}
+            </span>
+          </div>
+
+          {(profile.companyWebsite || profile.corporateUrl || profile.brandsUrl) && (
+            <a
+              href={profile.companyWebsite || profile.corporateUrl || profile.brandsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 hover:underline flex-shrink-0"
+            >
+              <span>Visitar Web</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+
+        <div className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1">
+          <span>¿A qué nos dedicamos?</span>
+        </div>
+        <p className="text-xs text-slate-200 leading-relaxed font-normal">
+          {profile.companyDescription || profile.bio || 'Soluciones de ingeniería especializada, tecnología industrial y atención técnica integral.'}
+        </p>
       </div>
 
       {/* Avatar Management Modal */}

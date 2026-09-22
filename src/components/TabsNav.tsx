@@ -7,10 +7,14 @@ interface TabsNavProps {
 }
 
 export const TabsNav: React.FC<TabsNavProps> = ({ activeTab, onChangeTab }) => {
+  const isProyectosActive = activeTab === 'proyectos' || activeTab === 'marcas';
+  const isWebActive = activeTab === 'web' || activeTab === 'grupo';
+
   const tabs = [
     {
       id: 'contacto' as ActiveTab,
       label: 'Contacto',
+      isActive: activeTab === 'contacto',
       icon: (
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -19,8 +23,9 @@ export const TabsNav: React.FC<TabsNavProps> = ({ activeTab, onChangeTab }) => {
       ),
     },
     {
-      id: 'marcas' as ActiveTab,
-      label: 'Marcas',
+      id: 'proyectos' as ActiveTab,
+      label: 'Proyectos',
+      isActive: isProyectosActive,
       icon: (
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -30,18 +35,14 @@ export const TabsNav: React.FC<TabsNavProps> = ({ activeTab, onChangeTab }) => {
       ),
     },
     {
-      id: 'grupo' as ActiveTab,
-      label: 'Grupo',
+      id: 'web' as ActiveTab,
+      label: 'Web',
+      isActive: isWebActive,
       icon: (
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-          <path d="M9 22v-4h6v4" />
-          <path d="M8 6h.01" />
-          <path d="M16 6h.01" />
-          <path d="M8 10h.01" />
-          <path d="M16 10h.01" />
-          <path d="M8 14h.01" />
-          <path d="M16 14h.01" />
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
         </svg>
       ),
     },
@@ -53,7 +54,7 @@ export const TabsNav: React.FC<TabsNavProps> = ({ activeTab, onChangeTab }) => {
       className="flex p-1 rounded-2xl bg-[#07151b]/90 border border-white/[0.08] mb-3.5 shadow-inner"
     >
       {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
+        const isActive = tab.isActive;
         return (
           <button
             key={tab.id}

@@ -1,6 +1,6 @@
 {
   "name": "AMMEGA Group · Plataforma de Tarjetas Digitales",
   "description": "Plataforma de tarjetas ejecutivas digitales corporativas de AMMEGA Group con guardado en la nube y generador de enlaces personalizados.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

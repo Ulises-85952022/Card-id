@@ -14,8 +14,11 @@ import {
   Search,
   Layers,
   ArrowRight,
+  Camera,
 } from 'lucide-react';
 import { slugify } from '../../lib/cardsService';
+import { BusinessCardScannerModal } from '../BusinessCardScannerModal';
+import { ScannedCardData } from '../../types';
 
 interface CardsDirectoryTabProps {
   onSelectEditCard: (slug: string) => void;
@@ -38,6 +41,7 @@ export const CardsDirectoryTab: React.FC<CardsDirectoryTabProps> = ({
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Form for creating new card
   const [newName, setNewName] = useState('');
@@ -48,6 +52,20 @@ export const CardsDirectoryTab: React.FC<CardsDirectoryTabProps> = ({
   const [newPhone, setNewPhone] = useState('+52 442 227 0000');
   const [newAddress, setNewAddress] = useState('Parque Industrial Querétaro / Ciudad de México');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleApplyScannedToNew = (data: ScannedCardData) => {
+    setIsCreating(true);
+    if (data.name) {
+      setNewName(data.name);
+      setNewSlug(slugify(data.name));
+    }
+    if (data.title) setNewTitle(data.title);
+    if (data.division) setNewDivision(data.division);
+    if (data.email) setNewEmail(data.email);
+    if (data.phone) setNewPhone(data.phone);
+    if (data.location) setNewAddress(data.location);
+    onShowToast('¡Tarjeta escaneada con éxito! Revisa los datos y pulsa "Crear Tarjeta y Guardar".');
+  };
 
   // Auto-slugify when name changes
   const handleNameChange = (val: string) => {
@@ -143,14 +161,26 @@ export const CardsDirectoryTab: React.FC<CardsDirectoryTabProps> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCreating(!isCreating)}
-          className="py-1.5 px-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 transition-all shadow-md active:scale-95"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>{isCreating ? 'Cancelar' : 'Crear Nueva Tarjeta'}</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsScannerOpen(true)}
+            className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+            title="Escanear tarjeta física con la cámara o subir imagen"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Escanear Tarjeta (IA)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCreating(!isCreating)}
+            className="py-1.5 px-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{isCreating ? 'Cancelar' : 'Crear Manual'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Creation form */}
@@ -417,6 +447,13 @@ export const CardsDirectoryTab: React.FC<CardsDirectoryTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Card Scanner Modal for Directory */}
+      <BusinessCardScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onApplyData={handleApplyScannedToNew}
+      />
     </div>
   );
 };

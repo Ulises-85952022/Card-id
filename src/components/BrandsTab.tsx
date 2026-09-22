@@ -18,7 +18,7 @@ interface BrandsTabProps {
 }
 
 export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
-  const { brands, openAdminWithBrand, isAdminMode } = useAppConfig();
+  const { profile, brands, openAdminWithBrand, isAdminMode } = useAppConfig();
   const [expandedBrand, setExpandedBrand] = useState<string | null>('ammeraal');
 
   const toggleExpand = (id: string) => {
@@ -32,12 +32,14 @@ export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
     return null;
   };
 
+  const sectionTitle = profile.projectsSectionTitle || 'Proyectos';
+
   return (
-    <div id="tab-content-marcas" className="space-y-3.5 animate-in fade-in duration-200">
+    <div id="tab-content-proyectos" className="space-y-3.5 animate-in fade-in duration-200">
       {/* Introduction note */}
       <div className="flex items-center justify-between px-1 mb-1">
         <p className="text-xs text-slate-300 font-medium">
-          Marcas mundiales unificadas bajo <span className="text-cyan-300 font-semibold">AMMEGA Group</span>
+          {sectionTitle} y Especialidades de <span className="text-cyan-300 font-semibold">{profile.company}</span>
         </p>
 
         {isAdminMode && (
@@ -45,10 +47,10 @@ export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
             type="button"
             onClick={() => openAdminWithBrand()}
             className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 hover:underline transition-colors"
-            title="Abrir menú de configuración para editar o agregar subcategorías"
+            title="Abrir menú para administrar proyectos y líneas"
           >
             <Settings2 className="w-3 h-3" />
-            <span>Configurar</span>
+            <span>Gestionar {sectionTitle}</span>
           </button>
         )}
       </div>

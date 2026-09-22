@@ -27,12 +27,16 @@ export interface UserProfile {
   title: string;
   division: string;
   company: string;
-  companyTagline: string;
+  companyTagline?: string;
+  companyDescription?: string;
+  companyWebsite?: string;
+  websiteSummary?: string;
+  projectsSectionTitle?: string;
   phoneDisplay: string;
   phoneRaw: string;
   whatsappNumber: string;
   email: string;
-  workEmail: string;
+  workEmail?: string;
   coverageZone: string;
   brandsUrl: string;
   corporateUrl: string;
@@ -63,6 +67,7 @@ export interface CardSummary {
   slug: string;
   name: string;
   title: string;
+  company?: string;
   email: string;
   whatsappNumber: string;
   isPrimaryAdmin?: boolean;
@@ -79,6 +84,21 @@ export interface ContactChannel {
   copyable?: boolean;
 }
 
-export type ActiveTab = 'contacto' | 'marcas' | 'grupo' | 'cotizador';
+export type ActiveTab = 'contacto' | 'proyectos' | 'web' | 'marcas' | 'grupo' | 'cotizador';
 
 export type AvailabilityStatus = 'disponible' | 'en-reunion' | 'en-campo';
+
+export interface ScannedCardData {
+  name?: string;
+  title?: string;
+  company?: string;
+  companyDescription?: string;
+  division?: string;
+  email?: string;
+  phone?: string;
+  whatsapp?: string;
+  website?: string;
+  location?: string;
+  projects?: string[];
+  notes?: string;
+}

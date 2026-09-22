@@ -167,8 +167,15 @@ function AppContent() {
 
         {/* Tab Content */}
         {activeTab === 'contacto' && <ContactTab />}
-        {activeTab === 'marcas' && <BrandsTab onOpenQuote={handleOpenQuote} />}
-        {activeTab === 'grupo' && <GroupTab onOpenQuote={handleOpenQuote} />}
+        {(activeTab === 'proyectos' || activeTab === 'marcas') && (
+          <BrandsTab onOpenQuote={handleOpenQuote} />
+        )}
+        {(activeTab === 'web' || activeTab === 'grupo') && (
+          <GroupTab
+            onOpenQuote={handleOpenQuote}
+            onOpenAdmin={() => openAdminWithBrand(undefined)}
+          />
+        )}
 
         {/* Footer with copyright & conditional admin controls */}
         <footer className="mt-5 pt-3 border-t border-white/[0.06] text-center space-y-2">

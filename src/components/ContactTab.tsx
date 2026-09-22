@@ -29,12 +29,16 @@ export const ContactTab: React.FC = () => {
     }
   };
 
+  const firstName = profile.name.trim().split(' ')[0] || 'Hola';
+  const websiteUrl = profile.companyWebsite || profile.corporateUrl || profile.brandsUrl || '';
+  const websiteDisplay = websiteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'Sitio Web';
+
   const contactList = [
     {
       id: 'c-whatsapp',
-      label: 'WhatsApp Business Directo',
+      label: 'WhatsApp Directo',
       val: `+${profile.whatsappNumber}`,
-      href: `https://wa.me/${profile.whatsappNumber}?text=Hola%20Ulises%2C%20me%20comunico%20desde%20tu%20tarjeta%20digital%20AMMEGA`,
+      href: `https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(`Hola ${firstName}, me comunico desde tu tarjeta digital ejecutiva de ${profile.company}`)}`,
       isExternal: true,
       iconType: 'wa',
       copyValue: `+${profile.whatsappNumber}`,
@@ -52,38 +56,29 @@ export const ContactTab: React.FC = () => {
       id: 'c-email',
       label: 'Correo Electrónico',
       val: profile.email,
-      href: `mailto:${profile.email}?subject=Consulta%20T%C3%A9cnica%20AMMEGA`,
+      href: `mailto:${profile.email}?subject=${encodeURIComponent(`Contacto Ejecutivo · ${profile.company}`)}`,
       isExternal: false,
       iconType: 'mail',
       copyValue: profile.email,
     },
     {
-      id: 'c-work-email',
-      label: 'Correo Corporativo AMMEGA',
-      val: profile.workEmail || 'ulises.hernandez@ammega.com',
-      href: `mailto:${profile.workEmail || 'ulises.hernandez@ammega.com'}?subject=AMMEGA%20Industrial%20Solutions`,
-      isExternal: false,
-      iconType: 'mail',
-      copyValue: profile.workEmail || 'ulises.hernandez@ammega.com',
-    },
-    {
       id: 'c-zone',
-      label: 'Zona de Cobertura',
-      val: profile.coverageZone,
-      href: `https://maps.google.com/?q=${encodeURIComponent(profile.coverageZone)}`,
+      label: 'Zona de Cobertura / Ubicación',
+      val: profile.coverageZone || profile.location || 'México',
+      href: `https://maps.google.com/?q=${encodeURIComponent(profile.coverageZone || profile.location || 'México')}`,
       isExternal: true,
       iconType: 'pin',
-      copyValue: profile.coverageZone,
+      copyValue: profile.coverageZone || profile.location || 'México',
     },
-    {
+    ...(websiteUrl ? [{
       id: 'c-portal',
-      label: 'Sitio Oficial de Marcas',
-      val: 'ammega.com/brands',
-      href: profile.brandsUrl,
+      label: `Página Web · ${profile.company}`,
+      val: websiteDisplay,
+      href: websiteUrl,
       isExternal: true,
       iconType: 'globe',
-      copyValue: profile.brandsUrl,
-    },
+      copyValue: websiteUrl,
+    }] : []),
   ];
 
   return (

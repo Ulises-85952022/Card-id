@@ -15,11 +15,10 @@ export function generateVCardString(customProfile?: UserProfile): string {
     `ORG:${p.company};${p.division || 'Belting & Industrial Solutions'}`,
     `TITLE:${p.title}`,
     `TEL;TYPE=CELL,VOICE,PREF:${p.phoneRaw}`,
-    `EMAIL;TYPE=INTERNET,WORK:${p.workEmail}`,
-    `EMAIL;TYPE=INTERNET,HOME:${p.email}`,
-    `URL;TYPE=WORK:${p.brandsUrl}`,
-    `ADR;TYPE=WORK:;;${p.coverageZone || 'Guadalajara / Región Occidente y Bajío'};Jalisco;;;México`,
-    `NOTE:${p.title} para ${p.company} (Ammeraal Beltech, Megadyne, Jason Hose Solutions). WhatsApp: ${p.whatsappNumber}`,
+    `EMAIL;TYPE=INTERNET,PREF:${p.email}`,
+    `URL;TYPE=WORK:${p.companyWebsite || p.brandsUrl || p.corporateUrl || ''}`,
+    `ADR;TYPE=WORK:;;${p.coverageZone || p.location || ''};;;;`,
+    `NOTE:${p.title} en ${p.company}.${p.companyDescription ? ' ' + p.companyDescription : ''} WhatsApp: ${p.whatsappNumber}`,
     'END:VCARD',
   ];
 
