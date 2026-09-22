@@ -19,6 +19,7 @@ import { AvailabilityStatus } from '../types';
 import { AvatarModal } from './AvatarModal';
 import { CompanyLogoModal } from './CompanyLogoModal';
 import { compressImage } from '../utils/imageCompressor';
+import { preconnectUrl } from '../utils/linkOptimizer';
 
 interface ProfileHeroProps {
   onOpenQr: () => void;
@@ -350,10 +351,15 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
 
       {/* Quick Action Grid (3 items: WhatsApp, Llamar, Web) */}
       <div className="grid grid-cols-3 gap-2.5 mb-3.5">
-        {/* WhatsApp */}
-        <button
-          type="button"
-          onClick={onQuickWhatsApp}
+        {/* WhatsApp - Direct Anchor with connection pre-warming */}
+        <a
+          href={`https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(
+            `Hola ${profile.name.split(' ')[0] || ''}, me comunico desde tu tarjeta digital ${profile.company ? `de ${profile.company}` : ''} para solicitar información.`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onMouseEnter={() => preconnectUrl('https://wa.me')}
+          onTouchStart={() => preconnectUrl('https://wa.me')}
           className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white/[0.04] hover:bg-emerald-500/15 border border-white/[0.08] hover:border-emerald-500/35 transition-all active:scale-[0.97]"
         >
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -364,7 +370,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-emerald-300">
             WhatsApp
           </span>
-        </button>
+        </a>
 
         {/* Llamar */}
         <a
@@ -381,9 +387,11 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
 
         {/* Web */}
         <a
-          href={profile.companyWebsite || profile.corporateUrl || profile.brandsUrl || '#'}
+          href={profile.companyWebsite || profile.corporateUrl || profile.brandsUrl || 'https://ammega.com/'}
           target="_blank"
           rel="noopener noreferrer"
+          onMouseEnter={() => preconnectUrl(profile.companyWebsite || 'https://ammega.com/')}
+          onTouchStart={() => preconnectUrl(profile.companyWebsite || 'https://ammega.com/')}
           className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white/[0.04] hover:bg-teal-500/15 border border-white/[0.08] hover:border-teal-500/35 transition-all active:scale-[0.97]"
         >
           <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center group-hover:scale-105 transition-transform">

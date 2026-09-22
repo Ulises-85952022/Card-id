@@ -121,10 +121,48 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsAdminMode(!isAdminMode);
   };
 
-  // State
-  const [currentCard, setCurrentCard] = useState<DigitalCard>(getDefaultAdminCard);
-  const [cardsList, setCardsList] = useState<DigitalCard[]>([getDefaultAdminCard()]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Instant Cache Reader: ensures 0-second load time when opening any link
+  const getInitialCard = (): { card: DigitalCard; isLoaded: boolean } => {
+    if (typeof window === 'undefined') {
+      return { card: getDefaultAdminCard(), isLoaded: false };
+    }
+    const targetSlug = getSlugFromUrl() || 'ulises-hernandez';
+    try {
+      const local = localStorage.getItem(STORAGE_KEY_PREFIX + targetSlug);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed && parsed.profile) {
+          const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
+          if (standaloneAvatar && !parsed.profile.avatarUrl) {
+            parsed.profile.avatarUrl = standaloneAvatar;
+          }
+          return { card: parsed, isLoaded: true };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Default primary admin is pre-compiled for instant display
+    if (targetSlug === 'ulises-hernandez' || !targetSlug) {
+      const defaultAdmin = getDefaultAdminCard();
+      try {
+        const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
+        if (standaloneAvatar) {
+          defaultAdmin.profile.avatarUrl = standaloneAvatar;
+        }
+      } catch (e) {}
+      return { card: defaultAdmin, isLoaded: true };
+    }
+
+    return { card: getDefaultAdminCard(), isLoaded: false };
+  };
+
+  // State: instantly initialized so user never sees an unnecessary loading screen
+  const [initialCache] = useState(getInitialCard);
+  const [currentCard, setCurrentCard] = useState<DigitalCard>(initialCache.card);
+  const [cardsList, setCardsList] = useState<DigitalCard[]>([initialCache.card]);
+  const [isLoading, setIsLoading] = useState<boolean>(!initialCache.isLoaded);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
   const [lastCloudSavedAt, setLastCloudSavedAt] = useState<string | null>(null);
 
@@ -133,11 +171,31 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Load active card based on URL slug or default
   const loadActiveCard = useCallback(async (slugToLoad?: string) => {
-    setIsLoading(true);
     const targetSlug = slugToLoad || getSlugFromUrl() || 'ulises-hernandez';
 
+    // Synchronously check local storage so we never block UI with a spinner
+    let hasLocal = false;
     try {
-      // Fetch from Firestore
+      const local = localStorage.getItem(STORAGE_KEY_PREFIX + targetSlug);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed && parsed.profile) {
+          setCurrentCard(parsed);
+          hasLocal = true;
+        }
+      }
+    } catch {}
+
+    if (targetSlug === 'ulises-hernandez') {
+      hasLocal = true;
+    }
+
+    if (!hasLocal) {
+      setIsLoading(true);
+    }
+
+    try {
+      // Fetch from Firestore in background (accelerated by memory cache & timeout)
       const cardFromCloud = await getCardBySlug(targetSlug);
       if (cardFromCloud) {
         let finalCard = cardFromCloud;

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAppConfig } from '../context/ConfigContext';
+import { preconnectUrl } from '../utils/linkOptimizer';
 
 export const FloatingWhatsApp: React.FC = () => {
   const { profile } = useAppConfig();
   const [showTooltip, setShowTooltip] = useState(false);
 
   const waUrl = `https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(
-    `Hola ${profile.name.split(' ')[0] || 'Ulises'}, me comunico desde tu tarjeta digital AMMEGA para solicitar información técnica.`
+    `Hola ${profile.name.split(' ')[0] || ''}, me comunico desde tu tarjeta digital ${profile.company ? `de ${profile.company}` : ''} para solicitar información técnica.`
   )}`;
 
   return (
@@ -24,8 +25,12 @@ export const FloatingWhatsApp: React.FC = () => {
         href={waUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onMouseEnter={() => setShowTooltip(true)}
+        onMouseEnter={() => {
+          setShowTooltip(true);
+          preconnectUrl('https://wa.me');
+        }}
         onMouseLeave={() => setShowTooltip(false)}
+        onTouchStart={() => preconnectUrl('https://wa.me')}
         className="w-14 h-14 rounded-full bg-[#25d366] text-white flex items-center justify-center shadow-[0_8px_24px_rgba(37,211,102,0.45)] hover:scale-110 active:scale-95 transition-all duration-150"
         aria-label="Contactar por WhatsApp directo"
       >

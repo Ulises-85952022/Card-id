@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppConfig } from '../context/ConfigContext';
 import { BrandInfo } from '../types';
 import { SmartBrandLogo, BrandLogoId } from './logos/SmartBrandLogo';
+import { preconnectUrl } from '../utils/linkOptimizer';
 import {
   ExternalLink,
   CheckCircle2,
@@ -164,6 +165,8 @@ export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
                               href={sub.linkUrl}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onMouseEnter={() => preconnectUrl(sub.linkUrl)}
+                              onTouchStart={() => preconnectUrl(sub.linkUrl)}
                               className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-0.5 shrink-0 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md hover:bg-cyan-500/20 transition-all"
                             >
                               <span>Ver</span>

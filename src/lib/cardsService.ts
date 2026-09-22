@@ -69,27 +69,58 @@ export async function getAllCards(): Promise<DigitalCard[]> {
   }
 }
 
-// Fetch a single card by slug (e.g. 'ulises-hernandez' or custom slug)
+// In-memory cache for ultra-fast instantaneous retrieval
+const cardMemoryCache = new Map<string, DigitalCard>();
+
+// Helper to race a promise with a timeout
+function raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number, fallbackVal: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallbackVal), timeoutMs)),
+  ]);
+}
+
+// Fetch a single card by slug (e.g. 'ulises-hernandez' or custom slug) with instant memory cache
 export async function getCardBySlug(slug: string): Promise<DigitalCard | null> {
   if (!slug) return null;
   const cleanSlug = slug.trim().toLowerCase();
+
+  // 1. Instant check in memory cache
+  const cached = cardMemoryCache.get(cleanSlug);
+  if (cached) {
+    return cached;
+  }
+
   try {
-    // Try by ID first
-    const docRef = doc(db, CARDS_COLLECTION, cleanSlug);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      return docToCard(snap.data(), snap.id);
-    }
+    const fetchPromise = (async () => {
+      // Try by ID first
+      const docRef = doc(db, CARDS_COLLECTION, cleanSlug);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const card = docToCard(snap.data(), snap.id);
+        cardMemoryCache.set(cleanSlug, card);
+        return card;
+      }
 
-    // Otherwise query by slug field
-    const q = query(collection(db, CARDS_COLLECTION), where('slug', '==', cleanSlug));
-    const querySnap = await getDocs(q);
-    if (!querySnap.empty) {
-      const first = querySnap.docs[0];
-      return docToCard(first.data(), first.id);
-    }
+      // Otherwise query by slug field
+      const q = query(collection(db, CARDS_COLLECTION), where('slug', '==', cleanSlug));
+      const querySnap = await getDocs(q);
+      if (!querySnap.empty) {
+        const first = querySnap.docs[0];
+        const card = docToCard(first.data(), first.id);
+        cardMemoryCache.set(cleanSlug, card);
+        return card;
+      }
 
-    return null;
+      return null;
+    })();
+
+    // 2. Race with 2500ms timeout to prevent hanging on slow network
+    const result = await raceWithTimeout(fetchPromise, 2500, null);
+    if (result) {
+      cardMemoryCache.set(cleanSlug, result);
+    }
+    return result;
   } catch (error) {
     console.warn(`Error fetching card with slug ${cleanSlug}:`, error);
     return null;
@@ -100,6 +131,10 @@ export async function getCardBySlug(slug: string): Promise<DigitalCard | null> {
 export async function saveCardToCloud(card: DigitalCard): Promise<{ success: boolean; error?: string }> {
   try {
     const id = card.id || card.slug;
+    const cleanSlug = card.slug.trim().toLowerCase();
+    cardMemoryCache.set(cleanSlug, card);
+    cardMemoryCache.set(id.trim().toLowerCase(), card);
+
     const docRef = doc(db, CARDS_COLLECTION, id);
     const payload = {
       id,

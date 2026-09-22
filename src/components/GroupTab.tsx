@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppConfig } from '../context/ConfigContext';
+import { preconnectUrl } from '../utils/linkOptimizer';
 import {
   Globe,
   ExternalLink,
@@ -83,6 +84,8 @@ export const GroupTab: React.FC<GroupTabProps> = ({ onOpenQuote, onOpenAdmin }) 
             href={websiteUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onMouseEnter={() => preconnectUrl(websiteUrl)}
+            onTouchStart={() => preconnectUrl(websiteUrl)}
             className="inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 text-xs font-bold transition-all shadow-md active:scale-[0.98] w-full"
           >
             <span>Visitar {displayHost}</span>

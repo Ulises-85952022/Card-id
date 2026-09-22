@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
+import { preconnectUrl } from '../utils/linkOptimizer';
 
 export const ContactTab: React.FC = () => {
   const { profile } = useAppConfig();
@@ -90,6 +91,8 @@ export const ContactTab: React.FC = () => {
           href={item.href}
           target={item.isExternal ? '_blank' : undefined}
           rel={item.isExternal ? 'noopener noreferrer' : undefined}
+          onMouseEnter={() => item.isExternal && preconnectUrl(item.href)}
+          onTouchStart={() => item.isExternal && preconnectUrl(item.href)}
           className="group flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.03] hover:bg-cyan-500/10 border border-white/[0.07] hover:border-cyan-500/35 transition-all duration-150"
         >
           <div className="flex items-center gap-3.5 min-w-0">
