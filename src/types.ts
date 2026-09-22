@@ -48,6 +48,27 @@ export interface AppConfig {
   lastUpdated?: string;
 }
 
+export interface DigitalCard {
+  id: string;
+  slug: string;
+  isPrimaryAdmin?: boolean;
+  profile: UserProfile;
+  brands: BrandInfo[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CardSummary {
+  id: string;
+  slug: string;
+  name: string;
+  title: string;
+  email: string;
+  whatsappNumber: string;
+  isPrimaryAdmin?: boolean;
+  updatedAt?: string;
+}
+
 export interface ContactChannel {
   id: string;
   title: string;

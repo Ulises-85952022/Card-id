@@ -12,11 +12,13 @@ import { QuoteModal } from './components/QuoteModal';
 import { AdminModal } from './components/AdminModal';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { AmmegaLogo } from './components/logos/AmmegaLogo';
-import { Smartphone, Monitor, Sparkles, SlidersHorizontal, Settings } from 'lucide-react';
+import { Smartphone, Monitor, Sparkles, SlidersHorizontal, Settings, Users, Cloud } from 'lucide-react';
 
 function AppContent() {
   const {
+    currentCard,
     profile,
+    isLoading,
     isAdminOpen,
     setIsAdminOpen,
     adminInitialBrandId,
@@ -45,9 +47,10 @@ function AppContent() {
     setTimeout(() => setSecretClickCount(0), 1200);
   };
 
-  const currentUrl =
+  // Generate clean public card URL without ?admin parameter for clients & QR codes
+  const publicClientUrl =
     typeof window !== 'undefined'
-      ? window.location.href
+      ? `${window.location.origin}${window.location.pathname}?card=${currentCard.slug}`
       : 'https://ammega.com/brands/';
 
   const handleOpenQuote = (brandId?: string) => {
@@ -57,10 +60,26 @@ function AppContent() {
 
   const handleQuickWhatsApp = () => {
     const waUrl = `https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(
-      `Hola ${profile.name.split(' ')[0] || 'Ulises'}, me comunico desde tu tarjeta digital AMMEGA para solicitar información técnica.`
+      `Hola ${profile.name.split(' ')[0] || 'Ingeniero'}, me comunico desde tu tarjeta digital AMMEGA para solicitar información técnica.`
     )}`;
     window.open(waUrl, '_blank');
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#07151b] text-slate-100 flex flex-col justify-center items-center p-6">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="bg-white/95 px-5 py-2.5 rounded-full shadow-lg border border-white/40">
+            <AmmegaLogo className="h-6 w-auto" whiteBg={true} />
+          </div>
+          <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold">
+            <span className="w-3 h-3 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+            <span>Cargando tarjeta digital AMMEGA...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#07151b] text-slate-100 flex flex-col justify-center items-center py-6 px-3 sm:px-6 relative overflow-x-hidden font-['Inter',sans-serif]">
@@ -84,13 +103,13 @@ function AppContent() {
 
         {/* View toggle & Admin button (Admin only visible when ?admin=1) */}
         <div className="flex items-center gap-1.5">
-          {/* Admin Menu Trigger Button - Only shown when ?admin=1 */}
+          {/* Admin Menu Trigger Button - Only shown when in Admin Mode */}
           {isAdminMode && (
             <button
               type="button"
               onClick={() => openAdminWithBrand(undefined)}
               className="flex items-center gap-1 py-1 px-2.5 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 hover:text-cyan-100 border border-cyan-500/40 transition-all text-[11px] font-semibold shadow-sm active:scale-95 animate-in fade-in"
-              title="Panel de Administrador: Configurar marcas, subcategorías y datos"
+              title="Panel de Administrador: Gestionar tarjetas, crear enlaces y guardar en la nube"
             >
               <SlidersHorizontal className="w-3 h-3 text-cyan-300" />
               <span>Admin</span>
@@ -129,7 +148,7 @@ function AppContent() {
         </div>
       </header>
 
-      {/* Main Card Shell matching Image 1.png exactly */}
+      {/* Main Card Shell */}
       <main
         id="digital-card-container"
         className={`relative z-10 w-full ${
@@ -154,14 +173,14 @@ function AppContent() {
         {/* Footer with copyright & conditional admin controls */}
         <footer className="mt-5 pt-3 border-t border-white/[0.06] text-center space-y-2">
           {isAdminMode && (
-            <div className="flex items-center justify-center gap-2 animate-in fade-in">
+            <div className="flex items-center justify-center gap-2 animate-in fade-in flex-wrap">
               <button
                 type="button"
                 onClick={() => openAdminWithBrand(undefined)}
                 className="inline-flex items-center gap-1.5 text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors font-medium hover:underline cursor-pointer"
               >
                 <Settings className="w-3 h-3" />
-                <span>Panel de Configuración (Modo Admin)</span>
+                <span>Panel Multi-Tarjetas AMMEGA (Admin)</span>
               </button>
               <span className="text-slate-600 text-xs">·</span>
               <button
@@ -191,14 +210,14 @@ function AppContent() {
       <QrModal
         isOpen={isQrOpen}
         onClose={() => setIsQrOpen(false)}
-        url={currentUrl}
+        url={publicClientUrl}
         name={profile.name}
       />
 
       <ShareModal
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
-        url={currentUrl}
+        url={publicClientUrl}
         name={profile.name}
         role={profile.title}
         company={profile.company}

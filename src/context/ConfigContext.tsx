@@ -1,18 +1,52 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppConfig, BrandInfo, BrandSubcategory, UserProfile } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { AppConfig, BrandInfo, BrandSubcategory, UserProfile, DigitalCard } from '../types';
 import { USER_PROFILE, BRANDS } from '../data';
+import {
+  getAllCards,
+  getCardBySlug,
+  saveCardToCloud,
+  deleteCardFromCloud,
+  getDefaultAdminCard,
+  slugify,
+} from '../lib/cardsService';
+import { testFirestoreConnection } from '../lib/firebase';
 
 interface ConfigContextType {
+  // Current active card data
+  currentCard: DigitalCard;
   profile: UserProfile;
   brands: BrandInfo[];
+  activeSlug: string;
+  isLoading: boolean;
+  cloudSyncStatus: 'idle' | 'syncing' | 'saved' | 'error';
+  lastCloudSavedAt: string | null;
+
+  // Updating active card
   updateProfile: (partial: Partial<UserProfile>) => void;
   updateBrand: (brandId: string, partial: Partial<BrandInfo>) => void;
   addSubcategory: (brandId: string, subcategory: Omit<BrandSubcategory, 'id'>) => void;
   updateSubcategory: (brandId: string, subcategoryId: string, partial: Partial<BrandSubcategory>) => void;
   deleteSubcategory: (brandId: string, subcategoryId: string) => void;
-  resetToDefaults: () => void;
-  exportJson: () => string;
-  importJson: (jsonText: string) => { success: boolean; error?: string };
+  saveCurrentCard: () => Promise<{ success: boolean; error?: string }>;
+
+  // Multi-card platform management (for Admin)
+  cardsList: DigitalCard[];
+  refreshCardsList: () => Promise<void>;
+  switchActiveCard: (slugOrId: string) => Promise<void>;
+  createCard: (cardData: {
+    slug: string;
+    name: string;
+    title: string;
+    division?: string;
+    email: string;
+    phone?: string;
+    whatsappNumber?: string;
+    address?: string;
+    avatarUrl?: string;
+  }) => Promise<{ success: boolean; card?: DigitalCard; error?: string }>;
+  removeCard: (cardId: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Admin UI controls
   isAdminOpen: boolean;
   setIsAdminOpen: (open: boolean) => void;
   openAdminWithBrand: (brandId?: string) => void;
@@ -20,15 +54,32 @@ interface ConfigContextType {
   isAdminMode: boolean;
   setIsAdminMode: (enabled: boolean) => void;
   toggleAdminMode: () => void;
+
+  // Reset & Helpers
+  resetToDefaults: () => void;
+  exportJson: () => string;
+  importJson: (jsonText: string) => { success: boolean; error?: string };
 }
 
-const STORAGE_KEY = 'ammega_digital_card_config_v2';
+const STORAGE_KEY_PREFIX = 'ammega_card_local_';
 const ADMIN_SESSION_KEY = 'ammega_admin_authenticated';
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
+// Helper to get slug from URL
+function getSlugFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('card') || params.get('c') || params.get('id') || null;
+}
+
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Detect if admin mode should be active (?admin=1 or ?admin=true or active session)
+  // Test connection on mount
+  useEffect(() => {
+    testFirestoreConnection();
+  }, []);
+
+  // Admin mode detection (?admin=1 or sessionStorage)
   const [isAdminMode, setIsAdminModeState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -42,7 +93,7 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return true;
         }
       } catch (e) {
-        // ignore storage errors
+        // ignore
       }
     }
     return false;
@@ -69,94 +120,124 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const toggleAdminMode = () => {
     setIsAdminMode(!isAdminMode);
   };
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed: AppConfig = JSON.parse(saved);
-          if (parsed.profile) {
-            return { ...USER_PROFILE, ...parsed.profile };
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load profile from localStorage', err);
-      }
-    }
-    return USER_PROFILE;
-  });
 
-  const [brands, setBrands] = useState<BrandInfo[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed: AppConfig = JSON.parse(saved);
-          if (Array.isArray(parsed.brands) && parsed.brands.length > 0) {
-            return parsed.brands;
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load brands from localStorage', err);
-      }
-    }
-    return BRANDS;
-  });
+  // State
+  const [currentCard, setCurrentCard] = useState<DigitalCard>(getDefaultAdminCard);
+  const [cardsList, setCardsList] = useState<DigitalCard[]>([getDefaultAdminCard()]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
+  const [lastCloudSavedAt, setLastCloudSavedAt] = useState<string | null>(null);
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminInitialBrandId, setAdminInitialBrandId] = useState<string | undefined>(undefined);
 
-  // Persist to localStorage whenever profile or brands change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const payload: AppConfig = {
-          profile,
-          brands,
-          lastUpdated: new Date().toISOString(),
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      } catch (err) {
-        console.error('Failed to persist to localStorage', err);
+  // Load active card based on URL slug or default
+  const loadActiveCard = useCallback(async (slugToLoad?: string) => {
+    setIsLoading(true);
+    const targetSlug = slugToLoad || getSlugFromUrl() || 'ulises-hernandez';
+
+    try {
+      // Fetch from Firestore
+      const cardFromCloud = await getCardBySlug(targetSlug);
+      if (cardFromCloud) {
+        setCurrentCard(cardFromCloud);
+        // Save local backup
+        localStorage.setItem(STORAGE_KEY_PREFIX + cardFromCloud.slug, JSON.stringify(cardFromCloud));
+      } else {
+        // Check local storage backup
+        const local = localStorage.getItem(STORAGE_KEY_PREFIX + targetSlug);
+        if (local) {
+          try {
+            setCurrentCard(JSON.parse(local));
+          } catch (e) {
+            setCurrentCard(getDefaultAdminCard());
+          }
+        } else {
+          // If neither exists, load default admin
+          const defaultAdmin = getDefaultAdminCard();
+          setCurrentCard(defaultAdmin);
+          // Seed cloud with default admin card if target was admin
+          if (targetSlug === 'ulises-hernandez') {
+            await saveCardToCloud(defaultAdmin);
+          }
+        }
       }
+    } catch (err) {
+      console.warn('Error in loadActiveCard:', err);
+      setCurrentCard(getDefaultAdminCard());
+    } finally {
+      setIsLoading(false);
     }
-  }, [profile, brands]);
+  }, []);
 
+  // Fetch all cards for admin directory
+  const refreshCardsList = useCallback(async () => {
+    try {
+      const all = await getAllCards();
+      setCardsList(all);
+    } catch (e) {
+      console.error('Failed to load cards list:', e);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadActiveCard();
+    refreshCardsList();
+  }, [loadActiveCard, refreshCardsList]);
+
+  // Derived profile and brands for backward compatibility with existing components
+  const profile = currentCard.profile;
+  const brands = currentCard.brands;
+
+  // Update current profile in state
   const updateProfile = (partial: Partial<UserProfile>) => {
-    setProfile((prev) => ({ ...prev, ...partial }));
+    setCurrentCard((prev) => ({
+      ...prev,
+      profile: { ...prev.profile, ...partial },
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
+  // Update brand in state
   const updateBrand = (brandId: string, partial: Partial<BrandInfo>) => {
-    setBrands((prev) =>
-      prev.map((b) => (b.id === brandId ? { ...b, ...partial } : b))
-    );
+    setCurrentCard((prev) => ({
+      ...prev,
+      brands: prev.brands.map((b) => (b.id === brandId ? { ...b, ...partial } : b)),
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
+  // Add subcategory in state
   const addSubcategory = (brandId: string, subcategory: Omit<BrandSubcategory, 'id'>) => {
     const newId = `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const fullSubcategory: BrandSubcategory = {
       ...subcategory,
       id: newId,
     };
-    setBrands((prev) =>
-      prev.map((b) => {
+    setCurrentCard((prev) => ({
+      ...prev,
+      brands: prev.brands.map((b) => {
         if (b.id !== brandId) return b;
         const currentSubs = b.subcategories || [];
         return {
           ...b,
           subcategories: [...currentSubs, fullSubcategory],
         };
-      })
-    );
+      }),
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
+  // Update subcategory in state
   const updateSubcategory = (
     brandId: string,
     subcategoryId: string,
     partial: Partial<BrandSubcategory>
   ) => {
-    setBrands((prev) =>
-      prev.map((b) => {
+    setCurrentCard((prev) => ({
+      ...prev,
+      brands: prev.brands.map((b) => {
         if (b.id !== brandId) return b;
         const currentSubs = b.subcategories || [];
         return {
@@ -165,39 +246,151 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             s.id === subcategoryId ? { ...s, ...partial } : s
           ),
         };
-      })
-    );
+      }),
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
+  // Delete subcategory in state
   const deleteSubcategory = (brandId: string, subcategoryId: string) => {
-    setBrands((prev) =>
-      prev.map((b) => {
+    setCurrentCard((prev) => ({
+      ...prev,
+      brands: prev.brands.map((b) => {
         if (b.id !== brandId) return b;
         const currentSubs = b.subcategories || [];
         return {
           ...b,
           subcategories: currentSubs.filter((s) => s.id !== subcategoryId),
         };
-      })
-    );
+      }),
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
-  const resetToDefaults = () => {
-    setProfile(USER_PROFILE);
-    setBrands(BRANDS);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('ammega_user_avatar');
+  // Save current active card to Cloud Firestore
+  const saveCurrentCard = async (): Promise<{ success: boolean; error?: string }> => {
+    setCloudSyncStatus('syncing');
+    try {
+      const result = await saveCardToCloud(currentCard);
+      if (result.success) {
+        setCloudSyncStatus('saved');
+        setLastCloudSavedAt(new Date().toLocaleTimeString());
+        // Backup to localStorage
+        localStorage.setItem(STORAGE_KEY_PREFIX + currentCard.slug, JSON.stringify(currentCard));
+        // Refresh cards directory
+        await refreshCardsList();
+        setTimeout(() => setCloudSyncStatus('idle'), 3500);
+        return { success: true };
+      } else {
+        setCloudSyncStatus('error');
+        return { success: false, error: result.error };
+      }
+    } catch (err: any) {
+      setCloudSyncStatus('error');
+      return { success: false, error: err?.message || 'Error al conectar con la base de datos' };
     }
   };
 
+  // Create a new digital card
+  const createCard = async (data: {
+    slug: string;
+    name: string;
+    title: string;
+    division?: string;
+    email: string;
+    phone?: string;
+    whatsappNumber?: string;
+    address?: string;
+    avatarUrl?: string;
+  }): Promise<{ success: boolean; card?: DigitalCard; error?: string }> => {
+    try {
+      const cleanSlug = slugify(data.slug || data.name);
+      if (!cleanSlug) {
+        return { success: false, error: 'El identificador/slug no puede estar vacío.' };
+      }
+
+      // Check if slug already exists
+      const existing = await getCardBySlug(cleanSlug);
+      if (existing) {
+        return { success: false, error: `Ya existe una tarjeta con el enlace "${cleanSlug}". Elige otro identificador.` };
+      }
+
+      const newCard: DigitalCard = {
+        id: cleanSlug,
+        slug: cleanSlug,
+        isPrimaryAdmin: false,
+        profile: {
+          ...USER_PROFILE,
+          name: data.name.trim(),
+          title: data.title.trim(),
+          division: data.division?.trim() || USER_PROFILE.division,
+          email: data.email.trim(),
+          workEmail: data.email.trim(),
+          phoneDisplay: data.phone?.trim() || USER_PROFILE.phoneDisplay,
+          phoneRaw: (data.phone || USER_PROFILE.phoneRaw).replace(/\D/g, ''),
+          whatsappNumber: (data.whatsappNumber || data.phone || USER_PROFILE.whatsappNumber).replace(/\D/g, ''),
+          location: data.address?.trim() || USER_PROFILE.location,
+          avatarUrl: data.avatarUrl?.trim() || '',
+        },
+        brands: JSON.parse(JSON.stringify(BRANDS)),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await saveCardToCloud(newCard);
+      if (result.success) {
+        await refreshCardsList();
+        return { success: true, card: newCard };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error al crear la tarjeta' };
+    }
+  };
+
+  // Remove a card
+  const removeCard = async (cardId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const card = cardsList.find((c) => c.id === cardId || c.slug === cardId);
+      if (card?.isPrimaryAdmin || card?.slug === 'ulises-hernandez') {
+        return { success: false, error: 'No se puede eliminar la tarjeta principal del Administrador.' };
+      }
+
+      const res = await deleteCardFromCloud(cardId);
+      if (res.success) {
+        await refreshCardsList();
+        if (currentCard.id === cardId || currentCard.slug === cardId) {
+          await loadActiveCard('ulises-hernandez');
+        }
+        return { success: true };
+      }
+      return { success: false, error: res.error };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error al eliminar' };
+    }
+  };
+
+  // Switch active card
+  const switchActiveCard = async (slugOrId: string) => {
+    const cleanSlug = slugify(slugOrId);
+    // Update browser URL query parameter without full reload
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('card', cleanSlug);
+      window.history.pushState({}, '', url.toString());
+    }
+    await loadActiveCard(cleanSlug);
+  };
+
+  // Reset current card to factory default
+  const resetToDefaults = () => {
+    const def = getDefaultAdminCard();
+    setCurrentCard(def);
+  };
+
   const exportJson = () => {
-    const payload: AppConfig = {
-      profile,
-      brands,
-      lastUpdated: new Date().toISOString(),
-    };
-    return JSON.stringify(payload, null, 2);
+    return JSON.stringify(currentCard, null, 2);
   };
 
   const importJson = (jsonText: string) => {
@@ -207,10 +400,12 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return { success: false, error: 'El archivo no contiene un formato JSON válido.' };
       }
       if (parsed.profile) {
-        setProfile({ ...USER_PROFILE, ...parsed.profile });
-      }
-      if (Array.isArray(parsed.brands)) {
-        setBrands(parsed.brands);
+        setCurrentCard((prev) => ({
+          ...prev,
+          profile: { ...prev.profile, ...parsed.profile },
+          brands: Array.isArray(parsed.brands) ? parsed.brands : prev.brands,
+          updatedAt: new Date().toISOString(),
+        }));
       }
       return { success: true };
     } catch (err: any) {
@@ -226,16 +421,24 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <ConfigContext.Provider
       value={{
+        currentCard,
         profile,
         brands,
+        activeSlug: currentCard.slug,
+        isLoading,
+        cloudSyncStatus,
+        lastCloudSavedAt,
         updateProfile,
         updateBrand,
         addSubcategory,
         updateSubcategory,
         deleteSubcategory,
-        resetToDefaults,
-        exportJson,
-        importJson,
+        saveCurrentCard,
+        cardsList,
+        refreshCardsList,
+        switchActiveCard,
+        createCard,
+        removeCard,
         isAdminOpen,
         setIsAdminOpen,
         openAdminWithBrand,
@@ -243,6 +446,9 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAdminMode,
         setIsAdminMode,
         toggleAdminMode,
+        resetToDefaults,
+        exportJson,
+        importJson,
       }}
     >
       {children}

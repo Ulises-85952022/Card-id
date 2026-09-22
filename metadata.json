@@ -1,6 +1,6 @@
 {
-  "name": "Ulises Hernández · AMMEGA Group",
-  "description": "Tarjeta digital interactiva y directorio de soluciones industriales para Ulises Hernández, Key Account Manager en AMMEGA Group.",
+  "name": "AMMEGA Group · Plataforma de Tarjetas Digitales",
+  "description": "Plataforma de tarjetas ejecutivas digitales corporativas de AMMEGA Group con guardado en la nube y generador de enlaces personalizados.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

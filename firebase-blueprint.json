@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "DigitalCard": {
+      "title": "DigitalCard",
+      "description": "Tarjeta digital ejecutiva corporativa de AMMEGA Group",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "description": "Identificador único de la tarjeta en la URL (ej: ulises-hernandez)" },
+        "name": { "type": "string", "description": "Nombre completo del ejecutivo o representante" },
+        "title": { "type": "string", "description": "Cargo o título profesional" },
+        "division": { "type": "string", "description": "División o departamento" },
+        "company": { "type": "string", "description": "Empresa matriz (AMMEGA Group)" },
+        "email": { "type": "string", "description": "Correo electrónico corporativo" },
+        "phone": { "type": "string", "description": "Teléfono con código de país" },
+        "phoneFormatted": { "type": "string", "description": "Teléfono con formato visual legible" },
+        "whatsappNumber": { "type": "string", "description": "Número de WhatsApp para contacto directo" },
+        "address": { "type": "string", "description": "Dirección física de planta u oficina" },
+        "addressCity": { "type": "string", "description": "Ciudad, Estado y País" },
+        "avatarUrl": { "type": "string", "description": "URL de la fotografía o avatar del ejecutivo" },
+        "websiteUrl": { "type": "string", "description": "Sitio web oficial" },
+        "isPrimaryAdmin": { "type": "boolean", "description": "Indica si es la tarjeta principal del administrador" },
+        "activeBrands": { "type": "array", "description": "Marcas habilitadas para esta tarjeta" },
+        "brandsData": { "type": "string", "description": "Configuración JSON serializada de marcas y subcategorías" },
+        "createdAt": { "type": "string", "description": "Fecha y hora de creación ISO 8601" },
+        "updatedAt": { "type": "string", "description": "Fecha y hora de última actualización ISO 8601" }
+      },
+      "required": ["slug", "name", "title", "email"]
+    },
+    "AppPlatformConfig": {
+      "title": "AppPlatformConfig",
+      "description": "Configuraciones globales de la plataforma y administración",
+      "type": "object",
+      "properties": {
+        "adminPin": { "type": "string", "description": "PIN de seguridad del administrador" },
+        "adminName": { "type": "string", "description": "Nombre del super administrador" },
+        "updatedAt": { "type": "string", "description": "Fecha de actualización ISO 8601" }
+      },
+      "required": ["adminPin"]
+    }
+  },
+  "firestore": {
+    "/cards/{cardId}": {
+      "schema": "DigitalCard",
+      "description": "Colección de tarjetas digitales ejecutivas públicas y editables por admin"
+    },
+    "/platform_settings/{settingId}": {
+      "schema": "AppPlatformConfig",
+      "description": "Parámetros globales de la plataforma"
+    }
+  }
+}
