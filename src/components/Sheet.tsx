@@ -3,23 +3,16 @@ import { X } from 'lucide-react';
 
 interface SheetProps {
   title: string;
-  subtitle?: string;
   onClose: () => void;
   children: React.ReactNode;
-  footer?: React.ReactNode;
 }
 
 /** Hoja inferior en móvil, diálogo centrado en escritorio. Cierra con Escape o tocando fuera. */
-export const Sheet: React.FC<SheetProps> = ({ title, subtitle, onClose, children, footer }) => {
+export const Sheet: React.FC<SheetProps> = ({ title, onClose, children }) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   return (
@@ -28,38 +21,23 @@ export const Sheet: React.FC<SheetProps> = ({ title, subtitle, onClose, children
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full sm:max-w-[440px] max-h-[92dvh] flex flex-col bg-white rounded-t-2xl sm:rounded-2xl"
+        className="w-full sm:max-w-[400px] bg-white rounded-t-2xl sm:rounded-2xl p-5 sm:p-6"
+        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 px-5 sm:px-6 pt-5 pb-3 border-b border-linea">
-          <div className="min-w-0">
-            <h3 className="text-[20px] font-semibold text-tinta">{title}</h3>
-            {subtitle && <p className="text-[14px] text-acero mt-0.5">{subtitle}</p>}
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-cond font-semibold text-[21px] text-tinta">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="w-10 h-10 -mr-2 shrink-0 inline-flex items-center justify-center rounded-md text-acero hover:bg-niebla hover:text-tinta"
+            className="w-10 h-10 -mr-2 inline-flex items-center justify-center rounded-md text-acero hover:bg-concreto hover:text-tinta"
             aria-label="Cerrar"
             autoFocus
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div
-          className="flex-1 overflow-y-auto px-5 sm:px-6 py-5"
-          style={footer ? undefined : { paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
-        >
-          {children}
-        </div>
-        {footer && (
-          <div
-            className="px-5 sm:px-6 pt-3 border-t border-linea bg-white rounded-b-2xl"
-            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-          >
-            {footer}
-          </div>
-        )}
+        {children}
       </div>
     </div>
   );
