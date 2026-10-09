@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, Settings } from 'lucide-react';
+import { ArrowUpRight, Pencil, Settings } from 'lucide-react';
 import { ConfigProvider, useAppConfig } from './context/ConfigContext';
 import { WalletCard, QuickActions } from './components/ProfileHero';
 import { ContactTab } from './components/ContactTab';
 import { BrandsTab } from './components/BrandsTab';
 import { ShareModal } from './components/ShareModal';
 import { AdminModal } from './components/AdminModal';
+import { ProfileEditorSheet } from './components/ProfileEditorSheet';
+import { getPublicCardUrl } from './utils/publicUrl';
 
 function AppContent() {
   const {
@@ -20,11 +22,9 @@ function AppContent() {
     setIsAdminMode,
   } = useAppConfig();
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
-  const publicClientUrl =
-    typeof window !== 'undefined' && window.location.protocol.startsWith('http') && !window.location.hostname.includes('claude')
-      ? `${window.location.origin}${window.location.pathname}?card=${currentCard.slug}`
-      : `https://cardwebid.vercel.app/?card=${currentCard.slug}`;
+  const publicClientUrl = getPublicCardUrl(currentCard.slug);
 
   const websiteUrl = profile.companyWebsite || profile.corporateUrl || profile.brandsUrl || '';
   const websiteHost = websiteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -75,8 +75,11 @@ function AppContent() {
 
       {isAdminMode && (
         <aside className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-stone-noche text-white py-2 px-4 rounded-full shadow-lg text-[14px]">
-          <button type="button" onClick={() => openAdminWithBrand(undefined)} className="inline-flex items-center gap-1.5 font-semibold">
-            <Settings className="w-4 h-4" /> Admin
+          <button type="button" onClick={() => setIsEditorOpen(true)} className="inline-flex items-center gap-1.5 font-semibold">
+            <Pencil className="w-4 h-4" /> Editar datos
+          </button>
+          <button type="button" onClick={() => openAdminWithBrand(undefined)} className="inline-flex items-center gap-1.5 text-white/80 hover:text-white">
+            <Settings className="w-4 h-4" /> Panel
           </button>
           <button type="button" onClick={() => setIsAdminMode(false)} className="text-white/70 hover:text-white underline">
             Salir
@@ -92,6 +95,7 @@ function AppContent() {
         role={profile.title}
         company={profile.company}
       />
+      {isAdminMode && <ProfileEditorSheet isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} />}
       {isAdminMode && (
         <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} initialBrandId={adminInitialBrandId} />
       )}
