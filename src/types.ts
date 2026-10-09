@@ -59,6 +59,8 @@ export interface DigitalCard {
   isPrimaryAdmin?: boolean;
   profile: UserProfile;
   brands: BrandInfo[];
+  /** Versión de las marcas oficiales; si es menor a BRANDS_VERSION se actualizan */
+  brandsVersion?: number;
   createdAt?: string;
   updatedAt?: string;
 }

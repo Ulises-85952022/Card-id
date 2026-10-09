@@ -1,244 +1,147 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { ArrowUpRight, Settings2 } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
 import { BrandInfo } from '../types';
 import { SmartBrandLogo, BrandLogoId } from './logos/SmartBrandLogo';
-import { preconnectUrl } from '../utils/linkOptimizer';
-import {
-  ExternalLink,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  MessageSquarePlus,
-  Plus,
-  Tag,
-  ArrowUpRight,
-  Settings2,
-} from 'lucide-react';
+import { QuoteSheet } from './QuoteSheet';
 
-interface BrandsTabProps {
-  onOpenQuote: (brandId: string) => void;
-}
+const KNOWN_LOGOS = ['ammeraal', 'megadyne', 'jason', 'ammega'];
 
-export const BrandsTab: React.FC<BrandsTabProps> = ({ onOpenQuote }) => {
+export const BrandsTab: React.FC = () => {
   const { profile, brands, openAdminWithBrand, isAdminMode } = useAppConfig();
-  const [expandedBrand, setExpandedBrand] = useState<string | null>('ammeraal');
-
-  const toggleExpand = (id: string) => {
-    setExpandedBrand((prev) => (prev === id ? null : id));
-  };
+  const [active, setActive] = useState(0);
+  const [quoteBrand, setQuoteBrand] = useState<BrandInfo | null>(null);
+  const trackRef = useRef<HTMLUListElement>(null);
 
   const renderLogo = (brand: BrandInfo) => {
-    if (brand.logoUrl) {
-      return (
-        <img
-          src={brand.logoUrl}
-          alt={brand.name}
-          className="h-6 w-auto max-w-[110px] object-contain"
-        />
-      );
-    }
-    if (brand.id === 'ammeraal' || brand.id === 'megadyne' || brand.id === 'jason' || brand.id === 'ammega') {
-      return <SmartBrandLogo brandId={brand.id as BrandLogoId} className="h-6" whiteBg={true} />;
-    }
-    return <span className="text-xs font-bold text-slate-800 tracking-tight">{brand.name}</span>;
+    if (brand.logoUrl) return <img src={brand.logoUrl} alt={brand.name} className="h-5 w-auto max-w-[110px] object-contain" />;
+    if (KNOWN_LOGOS.includes(brand.id)) return <SmartBrandLogo brandId={brand.id as BrandLogoId} className="h-5" whiteBg={true} />;
+    return <span className="text-[14px] font-semibold text-tinta">{brand.name}</span>;
   };
 
-  const sectionTitle = profile.projectsSectionTitle || 'Proyectos';
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el || !el.firstElementChild) return;
+    const w = (el.firstElementChild as HTMLElement).offsetWidth + 12;
+    setActive(Math.round(el.scrollLeft / w));
+  };
+
+  const goTo = (i: number) => {
+    const el = trackRef.current;
+    const child = el?.children[i] as HTMLElement | undefined;
+    if (el && child) el.scrollTo({ left: child.offsetLeft - el.offsetLeft - 20, behavior: 'smooth' });
+  };
 
   return (
-    <div id="tab-content-proyectos" className="space-y-3.5 animate-in fade-in duration-200">
-      {/* Introduction note */}
-      <div className="flex items-center justify-between px-1 mb-1">
-        <p className="text-xs text-slate-300 font-medium">
-          {sectionTitle} y Especialidades de <span className="text-cyan-300 font-semibold">{profile.company}</span>
-        </p>
-
-        {isAdminMode && (
-          <button
-            type="button"
-            onClick={() => openAdminWithBrand()}
-            className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 hover:underline transition-colors"
-            title="Abrir menú para administrar proyectos y líneas"
-          >
-            <Settings2 className="w-3 h-3" />
-            <span>Gestionar {sectionTitle}</span>
+    <section aria-labelledby="h-marcas">
+      <div className="px-5 sm:px-6 flex items-baseline justify-between mb-3">
+        <h2 id="h-marcas" className="text-[20px] font-semibold text-tinta">
+          Líneas de producto
+        </h2>
+        {isAdminMode ? (
+          <button type="button" onClick={() => openAdminWithBrand()} className="text-[14px] text-stone inline-flex items-center gap-1 hover:underline">
+            <Settings2 className="w-4 h-4" /> Editar
           </button>
+        ) : (
+          <span className="text-[14px] text-acero" aria-hidden="true">
+            {active + 1} de {brands.length}
+          </span>
         )}
       </div>
 
-      {/* Brand Cards List */}
-      <div className="space-y-3">
+      <ul
+        ref={trackRef}
+        onScroll={onScroll}
+        className="carrusel flex gap-3 overflow-x-auto px-5 sm:px-6 scroll-px-5 sm:scroll-px-6 pb-1"
+        aria-label="Marcas"
+      >
         {brands.map((brand) => {
-          const isExpanded = expandedBrand === brand.id;
-          const subcategories = brand.subcategories || [];
-
+          const subs = (brand.subcategories || []).slice(0, 3);
           return (
-            <div
+            <li
               key={brand.id}
               id={`brand-card-${brand.id}`}
-              className="rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-cyan-500/35 overflow-hidden transition-all duration-200"
+              className="shrink-0 w-[84%] rounded-2xl bg-niebla border border-linea p-4 flex flex-col"
             >
-              {/* Header bar */}
-              <div
-                onClick={() => toggleExpand(brand.id)}
-                className="p-3.5 flex items-center justify-between cursor-pointer select-none bg-gradient-to-r from-white/[0.02] to-transparent hover:bg-white/[0.05] transition-colors"
-              >
-                {/* Logo in white pill */}
-                <div className="flex items-center gap-3">
-                  <div className="bg-white rounded-xl py-1 px-2.5 shadow-sm inline-flex items-center justify-center border border-white/20">
-                    {renderLogo(brand)}
-                  </div>
-                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 uppercase tracking-wider">
-                    {brand.categoryPill}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 hidden sm:inline-block">
-                    {subcategories.length} subcat.
-                  </span>
-                  <button
-                    type="button"
-                    className="p-1 text-slate-400 hover:text-white"
-                    aria-label={isExpanded ? 'Contraer' : 'Expandir'}
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-cyan-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    )}
-                  </button>
-                </div>
+              <div className="flex items-center gap-3">
+                <span className="h-9 px-2.5 rounded-lg bg-white border border-linea flex items-center justify-center">
+                  {renderLogo(brand)}
+                </span>
               </div>
+              <h3 className="mt-3 text-[17px] font-semibold leading-snug text-tinta">{brand.category}</h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-acero line-clamp-3">{brand.description}</p>
 
-              {/* Card Body */}
-              <div className="px-4 pb-4 pt-1">
-                <p className="text-xs text-slate-300 leading-relaxed font-normal">
-                  {brand.description}
-                </p>
-
-                {/* Subcategories Section (The requested feature: title, description, link) */}
-                <div className="mt-3.5 pt-3 border-t border-white/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
-                      <Tag className="w-3 h-3 text-cyan-400" />
-                      <span>Líneas y Subcategorías</span>
-                    </div>
-
-                    {isAdminMode && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openAdminWithBrand(brand.id);
-                        }}
-                        className="text-[10px] py-0.5 px-2 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/25 font-semibold inline-flex items-center gap-1 transition-colors"
-                        title="Agregar o editar subcategorías para esta marca"
-                      >
-                        <Plus className="w-2.5 h-2.5" />
-                        <span>Agregar / Modificar</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Subcategories list cards */}
-                  <div className="space-y-2">
-                    {subcategories.slice(0, isExpanded ? undefined : 2).map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="p-2.5 rounded-xl bg-black/30 border border-white/[0.08] hover:border-cyan-500/35 transition-all text-xs flex flex-col gap-1"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-white text-xs">
-                              {sub.title}
-                            </span>
-                            {sub.badge && (
-                              <span className="text-[9px] font-semibold py-0.5 px-1.5 rounded-md bg-teal-500/15 border border-teal-500/30 text-teal-300">
-                                {sub.badge}
-                              </span>
-                            )}
-                          </div>
-
-                          {sub.linkUrl && (
-                            <a
-                              href={sub.linkUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onMouseEnter={() => preconnectUrl(sub.linkUrl)}
-                              onTouchStart={() => preconnectUrl(sub.linkUrl)}
-                              className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-0.5 shrink-0 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md hover:bg-cyan-500/20 transition-all"
-                            >
-                              <span>Ver</span>
-                              <ArrowUpRight className="w-3 h-3" />
-                            </a>
-                          )}
-                        </div>
-
-                        <p className="text-[11px] text-slate-300 leading-relaxed">
-                          {sub.description}
-                        </p>
-                      </div>
-                    ))}
-
-                    {!isExpanded && subcategories.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedBrand(brand.id)}
-                        className="w-full text-center py-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-medium"
-                      >
-                        + Ver {subcategories.length - 2} subcategorías más...
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Expandable industries */}
-                {isExpanded && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                      Sectores Clave en México
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {brand.industries.map((ind, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300 font-medium"
+              {subs.length > 0 && (
+                <p className="mt-4 text-[13px] font-semibold text-stone">Catálogos</p>
+              )}
+              {subs.length > 0 && (
+                <ul className="mt-1 divide-y divide-linea border-y border-linea">
+                  {subs.map((sub) => (
+                    <li key={sub.id}>
+                      {sub.linkUrl ? (
+                        <a
+                          href={sub.linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2.5 flex items-center justify-between gap-2 text-[14px] font-medium text-tinta hover:text-stone"
                         >
-                          {ind}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                          <span className="truncate">{sub.title}</span>
+                          <ArrowUpRight className="w-4 h-4 shrink-0 text-acero" aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span className="py-2.5 block text-[14px] font-medium text-tinta truncate">{sub.title}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-                {/* Bottom action buttons */}
-                <div className="mt-3.5 pt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onOpenQuote(brand.id)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-xs font-bold transition-colors"
-                  >
-                    <MessageSquarePlus className="w-3.5 h-3.5 text-cyan-400" />
-                    Cotizar {brand.name.split(' ')[0]}
-                  </button>
-
+              <div className="mt-auto pt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuoteBrand(brand)}
+                  className="flex-1 h-11 inline-flex items-center justify-center rounded-lg bg-stone hover:bg-stone-hondo text-white text-[15px] font-semibold"
+                >
+                  Cotizar
+                </button>
+                {(brand.officialUrl || brand.catalogUrl) && (
                   <a
-                    href={brand.catalogUrl || brand.officialUrl}
+                    href={brand.officialUrl || brand.catalogUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
-                    title="Sitio Oficial"
+                    className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-linea bg-white hover:border-stone text-tinta text-[15px] font-semibold"
                   >
-                    <span>Catálogo</span>
-                    <ExternalLink className="w-3 h-3" />
+                    Sitio web <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                   </a>
-                </div>
+                )}
               </div>
-            </div>
+              {isAdminMode && (
+                <button type="button" onClick={() => openAdminWithBrand(brand.id)} className="mt-2 text-[13px] text-stone hover:underline self-start">
+                  Editar líneas
+                </button>
+              )}
+            </li>
           );
         })}
+        <li aria-hidden="true" className="shrink-0 w-2" />
+      </ul>
+
+      <div className="mt-2 flex justify-center">
+        {brands.map((b, i) => (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={`Ver ${b.name}`}
+            aria-current={i === active}
+            className="p-2.5"
+          >
+            <span className={`block h-1.5 rounded-full transition-all ${i === active ? 'w-5 bg-stone' : 'w-1.5 bg-linea'}`} />
+          </button>
+        ))}
       </div>
-    </div>
+
+      {quoteBrand && <QuoteSheet brand={quoteBrand} onClose={() => setQuoteBrand(null)} />}
+    </section>
   );
 };

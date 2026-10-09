@@ -6,6 +6,10 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     base: './',
+    build: {
+      // Los logotipos oficiales (menos de 48 KB) se incrustan en el JS para que siempre se vean
+      assetsInlineLimit: 48 * 1024,
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

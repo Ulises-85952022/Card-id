@@ -1,502 +1,331 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Briefcase,
-  Globe,
-  UserPlus,
-  QrCode,
-  Share2,
-  Phone,
-  Camera,
-  Check,
-  Sparkles,
-  Building2,
-  ExternalLink,
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
+import { UserPlus, Phone, Mail, Share2, Camera, Check, RotateCw, Download } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
 import { SmartBrandLogo } from './logos/SmartBrandLogo';
 import { downloadVCard } from '../utils/vcard';
-import { AvailabilityStatus } from '../types';
 import { AvatarModal } from './AvatarModal';
 import { CompanyLogoModal } from './CompanyLogoModal';
 import { compressImage } from '../utils/imageCompressor';
 import { preconnectUrl } from '../utils/linkOptimizer';
 
-interface ProfileHeroProps {
-  onOpenQr: () => void;
-  onOpenShare: () => void;
-  onQuickWhatsApp: () => void;
+export const WhatsAppIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2Zm5.8 14.08c-.24.68-1.42 1.3-1.96 1.38-.5.07-1.13.1-1.83-.12-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.8-4.17-4.94-4.36-.14-.19-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.26-.29.58-.36.77-.36h.55c.18 0 .42-.07.66.5.24.58.82 2 .89 2.15.07.14.12.31.02.5-.1.19-.14.31-.29.48-.14.17-.3.37-.43.5-.14.14-.29.3-.13.59.17.29.74 1.22 1.59 1.98 1.1.98 2.02 1.28 2.31 1.42.29.14.46.12.62-.07.17-.19.72-.84.91-1.13.19-.29.38-.24.65-.14.26.1 1.68.79 1.97.94.29.14.48.22.55.34.07.12.07.7-.17 1.38Z" />
+  </svg>
+);
+
+const getInitials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() || '')
+    .join('');
+
+/* ------------------------------------------------------------------ */
+/* Tarjeta física: frente con datos, reverso con QR                    */
+/* ------------------------------------------------------------------ */
+
+interface WalletCardProps {
+  publicUrl: string;
 }
 
-export const ProfileHero: React.FC<ProfileHeroProps> = ({
-  onOpenQr,
-  onOpenShare,
-  onQuickWhatsApp,
-}) => {
-  const { profile, updateProfile } = useAppConfig();
-  const [savedSuccess, setSavedSuccess] = useState(false);
-  const [status, setStatus] = useState<AvailabilityStatus>(profile.status || 'disponible');
-  const [showStatusMenu, setShowStatusMenu] = useState(false);
+export const WalletCard: React.FC<WalletCardProps> = ({ publicUrl }) => {
+  const { profile, updateProfile, isAdminMode } = useAppConfig();
+  const [flipped, setFlipped] = useState(false);
+  const [tracking, setTracking] = useState(false);
+  const [qr, setQr] = useState('');
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
-  const [isAvatarDragOver, setIsAvatarDragOver] = useState(false);
-  const [avatarToast, setAvatarToast] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  // Initialize with persisted avatar if available or local public file
-  const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('ammega_user_avatar') || profile.avatarUrl || null;
-    }
-    return profile.avatarUrl || null;
-  });
+  const initials = getInitials(profile.name);
+  const avatarSrc = profile.avatarUrl || '/avatar.png';
 
-  // Sync avatar state whenever profile.avatarUrl updates from Cloud Firestore
   useEffect(() => {
-    if (profile.avatarUrl) {
-      setCustomAvatarUrl(profile.avatarUrl);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('ammega_user_avatar', profile.avatarUrl);
-        } catch {
-          // ignore
-        }
-      }
+    QRCode.toDataURL(publicUrl, { width: 420, margin: 0, color: { dark: '#003d45', light: '#ffffff' } })
+      .then(setQr)
+      .catch(() => setQr(''));
+  }, [publicUrl]);
+
+  // Inclinación solo con cursor fino; en el celular basta con tocar para voltear
+  const canTilt =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(hover: hover) and (pointer: fine)').matches &&
+    !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  const handleMove = (e: React.PointerEvent) => {
+    if (!canTilt || !cardRef.current) return;
+    const r = cardRef.current.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    const el = cardRef.current.style;
+    el.setProperty('--ry', `${(px - 0.5) * 14}deg`);
+    el.setProperty('--rx', `${(0.5 - py) * 10}deg`);
+    el.setProperty('--gx', `${px * 100}%`);
+    el.setProperty('--gy', `${py * 100}%`);
+    if (!tracking) setTracking(true);
+  };
+
+  const resetTilt = () => {
+    if (!cardRef.current) return;
+    const el = cardRef.current.style;
+    el.setProperty('--ry', '0deg');
+    el.setProperty('--rx', '0deg');
+    setTracking(false);
+  };
+
+  // Pegar una imagen con Ctrl+V cambia la foto solo en modo administrador
+  const saveAvatar = async (dataUrlOrFile: string | File) => {
+    try {
+      const optimized = await compressImage(dataUrlOrFile, { maxWidth: 440, maxHeight: 440, quality: 0.85 });
+      setAvatarFailed(false);
+      updateProfile({ avatarUrl: optimized });
+    } catch {
+      if (typeof dataUrlOrFile === 'string') updateProfile({ avatarUrl: dataUrlOrFile });
     }
-  }, [profile.avatarUrl]);
+  };
 
-  // Candidates for avatar: checks local files (/avatar.png, etc.) then fallback
-  const avatarCandidates = [
-    '/avatar.png',
-    '/avatar.jpg',
-    '/ulises.png',
-    './avatar.png',
-    'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400',
-  ];
-  const [avatarIndex, setAvatarIndex] = useState(0);
-
-  // Clipboard paste support: if user copies image and presses Ctrl+V, set as avatar
   useEffect(() => {
+    if (!isAdminMode) return;
     const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.startsWith('image/')) {
           const blob = items[i].getAsFile();
-          if (blob) {
-            try {
-              await saveAvatar(blob);
-              showNotification('Foto pegada y guardada con éxito');
-            } catch (err) {
-              console.error('Error pasting image:', err);
-            }
-          }
+          if (blob) await saveAvatar(blob);
           break;
         }
       }
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, []);
+  }, [isAdminMode]);
 
-  const showNotification = (msg: string) => {
-    setAvatarToast(msg);
-    setTimeout(() => setAvatarToast(null), 3500);
+  const downloadQr = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!qr) return;
+    const a = document.createElement('a');
+    a.href = qr;
+    a.download = `QR_${profile.name.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
-  const saveAvatar = async (dataUrlOrFile: string | File) => {
-    try {
-      // Compress and optimize image to ~30-50KB so it never exceeds LocalStorage or Firestore limits
-      const optimized = await compressImage(dataUrlOrFile, {
-        maxWidth: 440,
-        maxHeight: 440,
-        quality: 0.85,
-      });
-
-      setCustomAvatarUrl(optimized);
-
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('ammega_user_avatar', optimized);
-        } catch (e) {
-          console.warn('LocalStorage error saving avatar:', e);
-        }
-      }
-
-      // Update card profile in context & Firestore cloud database
-      updateProfile({ avatarUrl: optimized });
-      showNotification('Foto de perfil guardada permanentemente');
-    } catch (err) {
-      console.warn('Error saving compressed avatar, fallback to raw:', err);
-      if (typeof dataUrlOrFile === 'string') {
-        setCustomAvatarUrl(dataUrlOrFile);
-        updateProfile({ avatarUrl: dataUrlOrFile });
-        showNotification('Foto de perfil actualizada');
-      }
-    }
-  };
-
-  const resetAvatar = () => {
-    setCustomAvatarUrl(null);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem('ammega_user_avatar');
-      } catch (e) {}
-    }
-    updateProfile({ avatarUrl: '' });
-    showNotification('Foto restablecida');
-  };
-
-  const handleSaveCompanyLogo = (logoUrl: string) => {
-    updateProfile({ companyLogoUrl: logoUrl });
-    showNotification('Logotipo de empresa actualizado');
-  };
-
-  const handleResetCompanyLogo = () => {
-    updateProfile({ companyLogoUrl: '' });
-    showNotification('Logotipo restablecido al predeterminado');
-  };
-
-  const handleSaveContact = () => {
-    downloadVCard(profile);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
-  };
-
-  const handleAvatarFileDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsAvatarDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      await saveAvatar(file);
-    }
-  };
-
-  const currentAvatar = profile.avatarUrl || customAvatarUrl || avatarCandidates[avatarIndex];
+  const logo = profile.companyLogoUrl ? (
+    <img src={profile.companyLogoUrl} alt={profile.company} className="h-6 w-auto max-w-[110px] object-contain" />
+  ) : profile.company?.toLowerCase().includes('ammega') ? (
+    <SmartBrandLogo brandId="ammega" className="h-6 w-auto" whiteBg={true} />
+  ) : (
+    <span className="text-[13px] font-semibold text-tinta">{profile.company}</span>
+  );
 
   return (
-    <div className="flex flex-col">
-      {/* Top Header Bar */}
-      <header className="flex items-center justify-between mb-5">
-        {/* Left: Brand / Company Logo Capsule */}
-        <button
-          type="button"
-          onClick={() => setIsLogoModalOpen(true)}
-          className="group relative bg-white py-2 px-4 rounded-full shadow-lg shadow-black/40 flex items-center justify-center border border-white/30 hover:scale-[1.03] transition-all cursor-pointer"
-          title="Haz clic para cambiar el logotipo de la empresa"
-        >
-          {profile.companyLogoUrl ? (
-            <img
-              src={profile.companyLogoUrl}
-              alt={profile.company || 'Logotipo'}
-              className="h-6 sm:h-7 w-auto max-w-[130px] object-contain"
-            />
-          ) : profile.company && profile.company.toLowerCase().includes('ammega') ? (
-            <SmartBrandLogo brandId="ammega" className="h-6 sm:h-7 w-auto" whiteBg={true} />
-          ) : (
-            <span className="text-xs font-black text-slate-900 tracking-wider px-1.5 uppercase">
-              {profile.company || 'EMPRESA'}
-            </span>
-          )}
-
-          {/* Hover indicator icon */}
-          <span className="absolute -bottom-1 -right-1 opacity-0 group-hover:opacity-100 bg-cyan-500 text-slate-950 p-1 rounded-full text-[9px] font-bold shadow transition-opacity flex items-center justify-center">
-            <Camera className="w-2.5 h-2.5" />
-          </span>
-        </button>
-
-        {/* Right: Status Badge with pulse dot & toggle */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowStatusMenu(!showStatusMenu)}
-            className="inline-flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/35 text-emerald-400 text-[11px] font-bold py-1.5 px-3 rounded-full uppercase tracking-wider transition-all select-none"
-            title="Cambiar estado de disponibilidad"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span>
-              {status === 'disponible'
-                ? 'Disponible'
-                : status === 'en-reunion'
-                ? 'En Reunión'
-                : 'En Campo'}
-            </span>
-          </button>
-
-          {/* Quick status dropdown */}
-          {showStatusMenu && (
-            <div className="absolute right-0 mt-2 w-40 rounded-2xl bg-[#0e222c] border border-cyan-500/30 shadow-2xl p-1.5 z-30 text-xs text-left">
-              <button
-                onClick={() => {
-                  setStatus('disponible');
-                  setShowStatusMenu(false);
-                }}
-                className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-white/10 text-emerald-300 font-medium flex items-center gap-2"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                Disponible
-              </button>
-              <button
-                onClick={() => {
-                  setStatus('en-reunion');
-                  setShowStatusMenu(false);
-                }}
-                className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-white/10 text-amber-300 font-medium flex items-center gap-2"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                En Reunión
-              </button>
-              <button
-                onClick={() => {
-                  setStatus('en-campo');
-                  setShowStatusMenu(false);
-                }}
-                className="w-full text-left px-3 py-1.5 rounded-xl hover:bg-white/10 text-cyan-300 font-medium flex items-center gap-2"
-              >
-                <span className="w-2 h-2 rounded-full bg-cyan-500" />
-                En Campo / Planta
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Profile Hero Section */}
-      <section className="flex flex-col items-center text-center mb-5">
-        {/* Avatar Wrapper matching Image 1.png */}
+    <div className="px-5 pt-6 pb-16 sm:pt-10">
+      <div className="tarjeta-escena tarjeta-entrada">
         <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsAvatarDragOver(true);
-          }}
-          onDragLeave={() => setIsAvatarDragOver(false)}
-          onDrop={handleAvatarFileDrop}
-          className="relative group mb-3.5"
+          ref={cardRef}
+          className={`tarjeta ${flipped ? 'volteada' : ''} ${tracking ? 'siguiendo' : ''}`}
+          onClick={() => setFlipped((f) => !f)}
+          onPointerMove={handleMove}
+          onPointerLeave={resetTilt}
         >
-          <div
-            onClick={() => setIsAvatarModalOpen(true)}
-            className={`w-[110px] h-[110px] rounded-[26px] p-0.5 bg-gradient-to-tr from-cyan-400 via-teal-500 to-cyan-300 shadow-[0_10px_25px_rgba(0,168,181,0.35)] overflow-hidden transition-all duration-200 group-hover:scale-[1.03] cursor-pointer ${
-              isAvatarDragOver ? 'ring-4 ring-cyan-400 ring-offset-2 ring-offset-[#07151b]' : ''
-            }`}
-            title="Haz clic o arrastra tu foto aquí para cambiarla"
-          >
-            <img
-              src={currentAvatar}
-              alt={profile.name}
-              onError={() => {
-                if (!customAvatarUrl && avatarIndex < avatarCandidates.length - 1) {
-                  setAvatarIndex((prev) => prev + 1);
-                }
-              }}
-              className={`w-full h-full object-cover object-top rounded-[24px] bg-[#0f1d24] ${
-                !customAvatarUrl && avatarIndex === avatarCandidates.length - 1
-                  ? 'grayscale contrast-125 brightness-95'
-                  : ''
-              }`}
-            />
+          {/* FRENTE */}
+          <div className="cara cara-frente text-white" aria-hidden={flipped}>
+            <div className="absolute inset-0 p-[6%] flex flex-col">
+              <div className="flex items-start justify-between">
+                {isAdminMode ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLogoModalOpen(true);
+                    }}
+                    className="bg-white rounded-md py-1.5 px-2 flex items-center"
+                    title="Cambiar logotipo"
+                  >
+                    {logo}
+                  </button>
+                ) : (
+                  <div className="bg-white rounded-md py-1.5 px-2 flex items-center">{logo}</div>
+                )}
+
+                <div className="relative">
+                  <div className="w-[60px] h-[60px] sm:w-[68px] sm:h-[68px] rounded-[14px] overflow-hidden ring-2 ring-white/25 bg-stone-noche">
+                    {!avatarFailed ? (
+                      <img
+                        src={avatarSrc}
+                        alt=""
+                        onError={() => setAvatarFailed(true)}
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center ancho-expandido font-bold text-[20px] text-navajo">
+                        {initials}
+                      </div>
+                    )}
+                  </div>
+                  {isAdminMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsAvatarModalOpen(true);
+                      }}
+                      className="absolute -bottom-2 -left-2 p-1.5 rounded-full bg-white text-stone shadow"
+                      aria-label="Cambiar foto"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-auto">
+                <p className="ancho-expandido font-bold text-[clamp(20px,6.2vw,27px)] leading-[1.05] tracking-[-0.01em]">
+                  {profile.name}
+                </p>
+                <p className="mt-1.5 text-[15px] font-medium text-navajo">{profile.title}</p>
+                <p className="mt-0.5 text-[13px] text-white/75 truncate">{profile.division || profile.company}</p>
+              </div>
+            </div>
+            {/* Línea de guía de la banda, en el verde lima corporativo */}
+            <div className="absolute left-0 right-0 bottom-0 h-[5px] bg-lima" />
           </div>
 
-          {/* Edit photo button */}
-          <button
-            type="button"
-            onClick={() => setIsAvatarModalOpen(true)}
-            className="absolute -bottom-1 -right-1 p-2 rounded-full bg-[#0a1820] border border-cyan-400/70 text-cyan-300 hover:text-white shadow-lg cursor-pointer transition-transform hover:scale-110 active:scale-95"
-            title="Cambiar foto de perfil (subir, arrastrar o pegar)"
-            aria-label="Cambiar foto de perfil"
-          >
-            <Camera className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Subtle customize photo prompt */}
-        {!customAvatarUrl && (
-          <button
-            type="button"
-            onClick={() => setIsAvatarModalOpen(true)}
-            className="mb-2 text-[11px] text-cyan-400/80 hover:text-cyan-300 font-medium inline-flex items-center gap-1 hover:underline transition-colors"
-          >
-            <Camera className="w-3 h-3" />
-            <span>Haz clic para poner tu foto</span>
-          </button>
-        )}
-
-        {/* Quick toast notification */}
-        {avatarToast && (
-          <div className="mb-2 py-1 px-3 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5 animate-in fade-in duration-150">
-            <Check className="w-3 h-3 text-emerald-400" />
-            {avatarToast}
+          {/* REVERSO */}
+          <div className="cara cara-reverso" aria-hidden={!flipped}>
+            <div className="absolute inset-0 p-[6%] flex items-center gap-[6%]">
+              <div className="h-full aspect-square shrink-0">
+                {qr ? (
+                  <img src={qr} alt={`Código QR de la tarjeta de ${profile.name}`} className="w-full h-full" />
+                ) : (
+                  <div className="w-full h-full bg-niebla rounded-lg" />
+                )}
+              </div>
+              <div className="min-w-0 flex flex-col h-full justify-center">
+                <p className="ancho-expandido font-bold text-[17px] leading-tight text-stone">Escanea y guárdame</p>
+                <p className="mt-1.5 text-[13px] leading-snug text-acero">
+                  Apunta la cámara del celular al código para abrir esta tarjeta.
+                </p>
+                <button
+                  type="button"
+                  onClick={downloadQr}
+                  className="mt-3 self-start inline-flex items-center gap-1.5 text-[13px] font-semibold text-stone hover:underline"
+                  tabIndex={flipped ? 0 : -1}
+                >
+                  <Download className="w-4 h-4" /> Descargar QR
+                </button>
+              </div>
+            </div>
+            <div className="absolute left-0 right-0 bottom-0 h-[5px] bg-stone" />
           </div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setFlipped((f) => !f)}
+        className="mt-5 mx-auto flex items-center gap-2 text-[14px] text-white/80 hover:text-white"
+        aria-pressed={flipped}
+      >
+        <RotateCw className="w-4 h-4 text-lima" />
+        {flipped ? 'Toca la tarjeta para volver al frente' : 'Toca la tarjeta para ver mi código QR'}
+      </button>
+
+      {isAdminMode && (
+        <>
+          <AvatarModal
+            isOpen={isAvatarModalOpen}
+            onClose={() => setIsAvatarModalOpen(false)}
+            currentAvatar={profile.avatarUrl || ''}
+            initials={initials}
+            onSaveAvatar={saveAvatar}
+            onResetAvatar={() => {
+              updateProfile({ avatarUrl: '' });
+              setAvatarFailed(false);
+            }}
+          />
+          <CompanyLogoModal
+            isOpen={isLogoModalOpen}
+            onClose={() => setIsLogoModalOpen(false)}
+            currentLogoUrl={profile.companyLogoUrl}
+            companyName={profile.company}
+            onSaveLogo={(url: string) => updateProfile({ companyLogoUrl: url })}
+            onResetLogo={() => updateProfile({ companyLogoUrl: '' })}
+          />
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Acciones rápidas                                                    */
+/* ------------------------------------------------------------------ */
+
+export const QuickActions: React.FC<{ onOpenShare: () => void }> = ({ onOpenShare }) => {
+  const { profile } = useAppConfig();
+  const [saved, setSaved] = useState(false);
+  const firstName = profile.name.trim().split(' ')[0] || '';
+  const email = profile.workEmail || profile.email;
+
+  const handleSave = () => {
+    downloadVCard(profile);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const tile =
+    'h-[68px] flex flex-col items-center justify-center gap-1 rounded-xl border border-linea bg-white hover:border-stone text-[13px] font-semibold text-tinta transition-colors';
+
+  return (
+    <div className="px-5 sm:px-6">
+      <button
+        id="btn-guardar-contacto"
+        type="button"
+        onClick={handleSave}
+        className="w-full h-[54px] inline-flex items-center justify-center gap-2.5 rounded-xl bg-stone hover:bg-stone-hondo active:translate-y-px text-white text-[17px] font-semibold transition-colors"
+      >
+        {saved ? (
+          <>
+            <Check className="w-5 h-5 text-navajo" /> Contacto guardado
+          </>
+        ) : (
+          <>
+            <UserPlus className="w-5 h-5" /> Guardar contacto
+          </>
         )}
+      </button>
 
-        {/* User Name */}
-        <h1 className="text-xl sm:text-2xl font-bold text-white font-['Space_Grotesk'] tracking-tight mb-1.5">
-          {profile.name}
-        </h1>
-
-        {/* User Role Badge */}
-        <div className="inline-flex items-center gap-1.5 bg-cyan-500/15 border border-cyan-500/35 text-cyan-200 text-xs font-bold py-1 px-3.5 rounded-full mb-2 tracking-wide shadow-sm">
-          <Briefcase className="w-3.5 h-3.5 text-cyan-300" />
-          <span>{profile.title}</span>
-        </div>
-
-        {/* User Company Subtext */}
-        <div className="flex items-center justify-center gap-1.5 text-xs text-slate-300 font-semibold mb-1">
-          <Building2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-          <span className="truncate">
-            {profile.company}{profile.division ? ` · ${profile.division}` : ''}
-          </span>
-        </div>
-      </section>
-
-      {/* Quick Action Grid (3 items: WhatsApp, Llamar, Web) */}
-      <div className="grid grid-cols-3 gap-2.5 mb-3.5">
-        {/* WhatsApp - Direct Anchor with connection pre-warming */}
+      <div className="mt-2.5 grid grid-cols-4 gap-2">
         <a
-          href={`https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(
-            `Hola ${profile.name.split(' ')[0] || ''}, me comunico desde tu tarjeta digital ${profile.company ? `de ${profile.company}` : ''} para solicitar información.`
-          )}`}
+          href={`https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(`Hola ${firstName}, te escribo desde tu tarjeta digital.`)}`}
           target="_blank"
           rel="noopener noreferrer"
-          onMouseEnter={() => preconnectUrl('https://wa.me')}
-          onTouchStart={() => preconnectUrl('https://wa.me')}
-          className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white/[0.04] hover:bg-emerald-500/15 border border-white/[0.08] hover:border-emerald-500/35 transition-all active:scale-[0.97]"
+          onPointerEnter={() => preconnectUrl('https://wa.me')}
+          className={tile}
         >
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.276-.1-.476-.15-.677.15-.2.301-.777.978-.953 1.179-.176.2-.351.226-.652.075-.3-.15-1.267-.467-2.414-1.488-.893-.796-1.496-1.778-1.671-2.079-.176-.301-.019-.464.132-.614.135-.135.301-.351.451-.527.151-.176.2-.301.301-.502.1-.2.05-.376-.025-.526-.075-.15-.677-1.632-.928-2.234-.244-.588-.493-.508-.677-.518l-.577-.01c-.2 0-.526.075-.802.376s-1.054 1.029-1.054 2.509c0 1.48 1.079 2.909 1.23 3.11 0.15.2 2.122 3.24 5.14 4.543.718.31 1.279.495 1.716.634.722.23 1.378.197 1.898.119.579-.087 1.78-.727 2.031-1.43.251-.703.251-1.305.176-1.43-.075-.125-.276-.201-.577-.351z" />
-            </svg>
-          </div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-emerald-300">
-            WhatsApp
-          </span>
+          <WhatsAppIcon className="w-[22px] h-[22px] text-wa" />
+          WhatsApp
         </a>
-
-        {/* Llamar */}
-        <a
-          href={`tel:${profile.phoneRaw}`}
-          className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white/[0.04] hover:bg-cyan-500/15 border border-white/[0.08] hover:border-cyan-500/35 transition-all active:scale-[0.97]"
-        >
-          <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Phone className="w-4.5 h-4.5" />
-          </div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-cyan-300">
-            Llamar
-          </span>
+        <a href={`tel:${profile.phoneRaw}`} className={tile}>
+          <Phone className="w-5 h-5 text-stone" />
+          Llamar
         </a>
-
-        {/* Web */}
-        <a
-          href={profile.companyWebsite || profile.corporateUrl || profile.brandsUrl || 'https://ammega.com/'}
-          target="_blank"
-          rel="noopener noreferrer"
-          onMouseEnter={() => preconnectUrl(profile.companyWebsite || 'https://ammega.com/')}
-          onTouchStart={() => preconnectUrl(profile.companyWebsite || 'https://ammega.com/')}
-          className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-white/[0.04] hover:bg-teal-500/15 border border-white/[0.08] hover:border-teal-500/35 transition-all active:scale-[0.97]"
-        >
-          <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Globe className="w-4.5 h-4.5" />
-          </div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-teal-300">
-            Web
-          </span>
+        <a href={`mailto:${email}`} className={tile}>
+          <Mail className="w-5 h-5 text-stone" />
+          Correo
         </a>
-      </div>
-
-      {/* Save Contact & Quick Share Row */}
-      <div className="flex items-center gap-2 mb-3">
-        {/* Main CTA: Guardar en Contactos */}
-        <button
-          id="btn-guardar-contacto"
-          type="button"
-          onClick={handleSaveContact}
-          className="flex-1 inline-flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl bg-gradient-to-r from-[#005762] via-[#008794] to-[#06b6d4] hover:brightness-110 text-white font-bold text-sm shadow-[0_8px_20px_rgba(0,87,98,0.45)] active:scale-[0.98] transition-all"
-        >
-          {savedSuccess ? (
-            <>
-              <Check className="w-4 h-4 text-emerald-300" />
-              <span>¡Contacto Guardado!</span>
-            </>
-          ) : (
-            <>
-              <UserPlus className="w-4 h-4" />
-              <span>Guardar en Contactos</span>
-            </>
-          )}
-        </button>
-
-        {/* QR Button */}
-        <button
-          id="btn-open-qr"
-          type="button"
-          onClick={onOpenQr}
-          title="Ver código QR"
-          className="w-12 h-12 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-[0.95] flex-shrink-0"
-        >
-          <QrCode className="w-5 h-5" />
-        </button>
-
-        {/* Share Button */}
-        <button
-          id="btn-open-share"
-          type="button"
-          onClick={onOpenShare}
-          title="Compartir tarjeta"
-          className="w-12 h-12 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all active:scale-[0.95] flex-shrink-0"
-        >
-          <Share2 className="w-5 h-5" />
+        <button type="button" onClick={onOpenShare} className={tile}>
+          <Share2 className="w-5 h-5 text-stone" />
+          Compartir
         </button>
       </div>
-
-      {/* Ficha Corporativa: Nombre de la Empresa y a qué se dedican */}
-      <div className="p-3.5 rounded-2xl bg-gradient-to-br from-cyan-950/25 via-slate-900/40 to-slate-950/40 border border-cyan-500/20 text-left mb-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Building2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-            <span className="text-xs font-bold text-white uppercase tracking-wider truncate">
-              {profile.company}
-            </span>
-          </div>
-
-          {(profile.companyWebsite || profile.corporateUrl || profile.brandsUrl) && (
-            <a
-              href={profile.companyWebsite || profile.corporateUrl || profile.brandsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 hover:underline flex-shrink-0"
-            >
-              <span>Visitar Web</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
-        </div>
-
-        <div className="text-[11px] font-semibold text-slate-400 mb-1 flex items-center gap-1">
-          <span>¿A qué nos dedicamos?</span>
-        </div>
-        <p className="text-xs text-slate-200 leading-relaxed font-normal">
-          {profile.companyDescription || profile.bio || 'Soluciones de ingeniería especializada, tecnología industrial y atención técnica integral.'}
-        </p>
-      </div>
-
-      {/* Avatar Management Modal */}
-      <AvatarModal
-        isOpen={isAvatarModalOpen}
-        onClose={() => setIsAvatarModalOpen(false)}
-        currentAvatar={currentAvatar}
-        onSaveAvatar={saveAvatar}
-        onResetAvatar={resetAvatar}
-      />
-
-      {/* Company Logo Management Modal */}
-      <CompanyLogoModal
-        isOpen={isLogoModalOpen}
-        onClose={() => setIsLogoModalOpen(false)}
-        currentLogoUrl={profile.companyLogoUrl}
-        companyName={profile.company}
-        onSaveLogo={handleSaveCompanyLogo}
-        onResetLogo={handleResetCompanyLogo}
-      />
     </div>
   );
 };

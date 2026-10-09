@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { DigitalCard, CardSummary, UserProfile, BrandInfo } from '../types';
-import { USER_PROFILE, BRANDS } from '../data';
+import { USER_PROFILE, BRANDS, BRANDS_VERSION } from '../data';
 
 const CARDS_COLLECTION = 'cards';
 const DEFAULT_ADMIN_SLUG = 'ulises-hernandez';
@@ -24,8 +24,23 @@ function docToCard(docData: any, id: string): DigitalCard {
     isPrimaryAdmin: !!docData.isPrimaryAdmin,
     profile: { ...USER_PROFILE, ...(docData.profile || {}) },
     brands: Array.isArray(docData.brands) && docData.brands.length > 0 ? docData.brands : BRANDS,
+    brandsVersion: docData.brandsVersion || 0,
     createdAt: docData.createdAt || new Date().toISOString(),
     updatedAt: docData.updatedAt || new Date().toISOString(),
+  };
+}
+
+/**
+ * Si la tarjeta guardada tiene marcas de una versión anterior, reemplaza las marcas oficiales
+ * (mismo id que en data.ts) por las actuales y conserva las marcas personalizadas.
+ */
+export function withCurrentBrands(card: DigitalCard): { card: DigitalCard; changed: boolean } {
+  if ((card.brandsVersion || 0) >= BRANDS_VERSION) return { card, changed: false };
+  const officialIds = new Set(BRANDS.map((b) => b.id));
+  const custom = (card.brands || []).filter((b) => !officialIds.has(b.id));
+  return {
+    card: { ...card, brands: [...JSON.parse(JSON.stringify(BRANDS)), ...custom], brandsVersion: BRANDS_VERSION },
+    changed: true,
   };
 }
 
@@ -37,6 +52,7 @@ export function getDefaultAdminCard(): DigitalCard {
     isPrimaryAdmin: true,
     profile: { ...USER_PROFILE },
     brands: JSON.parse(JSON.stringify(BRANDS)),
+    brandsVersion: BRANDS_VERSION,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -151,6 +167,7 @@ export async function saveCardToCloud(card: DigitalCard): Promise<{ success: boo
       isPrimaryAdmin: !!card.isPrimaryAdmin,
       profile: card.profile,
       brands: card.brands,
+      brandsVersion: card.brandsVersion || 0,
       createdAt: card.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

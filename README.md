@@ -19,7 +19,7 @@ public/
 ```
 
 *Formatos compatibles:* `.png`, `.svg`, `.jpg`, `.webp`.  
-*(Si no colocas alguna imagen, el sistema cuenta con respaldos vectoriales de alta fidelidad para que nunca se vea rota).*
+*(Los logotipos oficiales de AMMEGA, Ammeraal Beltech, Megadyne y Jason ya están en `src/assets/logos/`. Para cambiar uno, reemplaza el PNG con el mismo nombre).*
 
 ---
 

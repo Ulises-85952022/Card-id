@@ -6,6 +6,7 @@ interface AvatarModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentAvatar: string;
+  initials?: string;
   onSaveAvatar: (dataUrl: string) => void;
   onResetAvatar: () => void;
 }
@@ -14,6 +15,7 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
   isOpen,
   onClose,
   currentAvatar,
+  initials = '?',
   onSaveAvatar,
   onResetAvatar,
 }) => {
@@ -112,13 +114,21 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
         {/* Avatar Preview */}
         <div className="relative mb-4">
           <div className="w-28 h-28 rounded-[24px] p-0.5 bg-gradient-to-tr from-cyan-400 via-teal-400 to-emerald-400 shadow-[0_0_25px_rgba(0,168,181,0.35)] overflow-hidden">
-            <img
-              src={activeDisplay}
-              alt="Previsualización"
-              className={`w-full h-full object-cover object-top rounded-[22px] bg-[#0a151b] transition-all duration-200 ${
-                filterStyle === 'bw' ? 'grayscale contrast-125 brightness-95' : ''
-              }`}
-            />
+            {activeDisplay ? (
+              <img
+                src={activeDisplay}
+                alt="Previsualización"
+                className={`w-full h-full object-cover object-top rounded-[22px] bg-[#0a151b] transition-all duration-200 ${
+                  filterStyle === 'bw' ? 'grayscale contrast-125 brightness-95' : ''
+                }`}
+              />
+            ) : (
+              <div className="w-full h-full rounded-[22px] bg-[#0a151b] flex items-center justify-center select-none">
+                <span className="text-4xl font-semibold tracking-tight text-cyan-200 font-['Space_Grotesk']">
+                  {initials}
+                </span>
+              </div>
+            )}
           </div>
           {previewUrl && (
             <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white p-1 rounded-full text-[10px] shadow">

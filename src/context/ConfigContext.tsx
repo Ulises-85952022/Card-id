@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AppConfig, BrandInfo, BrandSubcategory, UserProfile, DigitalCard } from '../types';
 import { USER_PROFILE, BRANDS } from '../data';
 import {
@@ -7,6 +7,7 @@ import {
   saveCardToCloud,
   deleteCardFromCloud,
   getDefaultAdminCard,
+  withCurrentBrands,
   slugify,
 } from '../lib/cardsService';
 import { testFirestoreConnection } from '../lib/firebase';
@@ -160,7 +161,28 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // State: instantly initialized so user never sees an unnecessary loading screen
   const [initialCache] = useState(getInitialCard);
-  const [currentCard, setCurrentCard] = useState<DigitalCard>(initialCache.card);
+  const [currentCard, setCurrentCardRaw] = useState<DigitalCard>(() => withCurrentBrands(initialCache.card).card);
+  const pendingBrandsSave = useRef(initialCache.card && withCurrentBrands(initialCache.card).changed);
+
+  // Toda tarjeta que entra al estado pasa por la actualización de marcas oficiales
+  const setCurrentCard = useCallback((value: React.SetStateAction<DigitalCard>) => {
+    setCurrentCardRaw((prev) => {
+      const next = typeof value === 'function' ? (value as (p: DigitalCard) => DigitalCard)(prev) : value;
+      const { card, changed } = withCurrentBrands(next);
+      if (changed) pendingBrandsSave.current = true;
+      return card;
+    });
+  }, []);
+
+  // Si se actualizaron las marcas, se guarda una sola vez en la nube y en el respaldo local
+  useEffect(() => {
+    if (!pendingBrandsSave.current) return;
+    pendingBrandsSave.current = false;
+    try {
+      localStorage.setItem(STORAGE_KEY_PREFIX + currentCard.slug, JSON.stringify(currentCard));
+    } catch {}
+    saveCardToCloud(currentCard).catch(() => {});
+  }, [currentCard]);
   const [cardsList, setCardsList] = useState<DigitalCard[]>([initialCache.card]);
   const [isLoading, setIsLoading] = useState<boolean>(!initialCache.isLoaded);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
