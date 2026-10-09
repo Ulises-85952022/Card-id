@@ -17,7 +17,7 @@ export const ContactTab: React.FC = () => {
   };
 
   const zone = profile.coverageZone || profile.location || 'México';
-  const email = profile.workEmail || profile.email;
+  const email = profile.email;
 
   const rows = [
     {

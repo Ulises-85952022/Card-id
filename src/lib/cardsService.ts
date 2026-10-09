@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { DigitalCard, CardSummary, UserProfile, BrandInfo } from '../types';
-import { USER_PROFILE, BRANDS, BRANDS_VERSION } from '../data';
+import { USER_PROFILE, BRANDS, BRANDS_VERSION, PROFILE_VERSION, PROFILE_FIXED_FIELDS } from '../data';
 
 const CARDS_COLLECTION = 'cards';
 const DEFAULT_ADMIN_SLUG = 'ulises-hernandez';
@@ -25,6 +25,7 @@ function docToCard(docData: any, id: string): DigitalCard {
     profile: { ...USER_PROFILE, ...(docData.profile || {}) },
     brands: Array.isArray(docData.brands) && docData.brands.length > 0 ? docData.brands : BRANDS,
     brandsVersion: docData.brandsVersion || 0,
+    profileVersion: docData.profileVersion || 0,
     createdAt: docData.createdAt || new Date().toISOString(),
     updatedAt: docData.updatedAt || new Date().toISOString(),
   };
@@ -35,13 +36,28 @@ function docToCard(docData: any, id: string): DigitalCard {
  * (mismo id que en data.ts) por las actuales y conserva las marcas personalizadas.
  */
 export function withCurrentBrands(card: DigitalCard): { card: DigitalCard; changed: boolean } {
-  if ((card.brandsVersion || 0) >= BRANDS_VERSION) return { card, changed: false };
-  const officialIds = new Set(BRANDS.map((b) => b.id));
-  const custom = (card.brands || []).filter((b) => !officialIds.has(b.id));
-  return {
-    card: { ...card, brands: [...JSON.parse(JSON.stringify(BRANDS)), ...custom], brandsVersion: BRANDS_VERSION },
-    changed: true,
-  };
+  let next = card;
+  let changed = false;
+
+  if ((next.brandsVersion || 0) < BRANDS_VERSION) {
+    const officialIds = new Set(BRANDS.map((b) => b.id));
+    const custom = (next.brands || []).filter((b) => !officialIds.has(b.id));
+    next = { ...next, brands: [...JSON.parse(JSON.stringify(BRANDS)), ...custom], brandsVersion: BRANDS_VERSION };
+    changed = true;
+  }
+
+  // Correcciones de contacto: solo para la tarjeta principal, nunca para tarjetas de otras personas
+  const isPrimary = next.isPrimaryAdmin || next.slug === DEFAULT_ADMIN_SLUG;
+  if (isPrimary && (next.profileVersion || 0) < PROFILE_VERSION) {
+    const fixes: Record<string, unknown> = {};
+    PROFILE_FIXED_FIELDS.forEach((field) => {
+      fixes[field] = USER_PROFILE[field];
+    });
+    next = { ...next, profile: { ...next.profile, ...fixes }, profileVersion: PROFILE_VERSION };
+    changed = true;
+  }
+
+  return { card: next, changed };
 }
 
 // Get the default initial admin card
@@ -53,6 +69,7 @@ export function getDefaultAdminCard(): DigitalCard {
     profile: { ...USER_PROFILE },
     brands: JSON.parse(JSON.stringify(BRANDS)),
     brandsVersion: BRANDS_VERSION,
+    profileVersion: PROFILE_VERSION,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -168,6 +185,7 @@ export async function saveCardToCloud(card: DigitalCard): Promise<{ success: boo
       profile: card.profile,
       brands: card.brands,
       brandsVersion: card.brandsVersion || 0,
+      profileVersion: card.profileVersion || 0,
       createdAt: card.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

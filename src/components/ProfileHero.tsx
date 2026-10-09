@@ -272,7 +272,7 @@ export const QuickActions: React.FC<{ onOpenShare: () => void }> = ({ onOpenShar
   const { profile } = useAppConfig();
   const [saved, setSaved] = useState(false);
   const firstName = profile.name.trim().split(' ')[0] || '';
-  const email = profile.workEmail || profile.email;
+  const email = profile.email;
 
   const handleSave = () => {
     downloadVCard(profile);

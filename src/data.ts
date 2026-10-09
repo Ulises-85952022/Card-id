@@ -13,7 +13,7 @@ export const USER_PROFILE: UserProfile = {
   phoneDisplay: '(33) 1618 0902',
   phoneRaw: '+523316180902',
   whatsappNumber: '523316180902',
-  email: 'Ulises.fraile@ammega.com',
+  email: 'ulise.fraile@ammega.com',
   coverageZone: 'Guadalajara / Occidente & Bajío · México',
   brandsUrl: 'https://ammega.com/brands/',
   corporateUrl: 'https://ammega.com/',
@@ -27,6 +27,13 @@ export const USER_PROFILE: UserProfile = {
  * con una versión anterior se actualizan solas al abrirse.
  */
 export const BRANDS_VERSION = 2;
+
+/**
+ * Sube este número cuando corrijas un dato de contacto en USER_PROFILE: la tarjeta principal
+ * guardada en la nube toma el valor nuevo de los campos listados en PROFILE_FIXED_FIELDS.
+ */
+export const PROFILE_VERSION = 1;
+export const PROFILE_FIXED_FIELDS = ['email'] as const;
 
 export const BRANDS: BrandInfo[] = [
   {
@@ -163,8 +170,8 @@ export const CONTACT_CHANNELS: ContactChannel[] = [
   {
     id: 'email',
     title: 'Correo Corporativo',
-    value: 'Ulises.fraile@ammega.com',
-    actionUrl: 'mailto:Ulises.fraile@ammega.com?subject=Consulta%20T%C3%A9cnica%20-%20Soluciones%20AMMEGA',
+    value: 'ulise.fraile@ammega.com',
+    actionUrl: 'mailto:ulise.fraile@ammega.com?subject=Consulta%20T%C3%A9cnica%20-%20Soluciones%20AMMEGA',
     icon: 'mail',
     isExternal: false,
   },

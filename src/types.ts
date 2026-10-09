@@ -61,6 +61,8 @@ export interface DigitalCard {
   brands: BrandInfo[];
   /** Versión de las marcas oficiales; si es menor a BRANDS_VERSION se actualizan */
   brandsVersion?: number;
+  /** Versión de las correcciones de perfil de la tarjeta principal */
+  profileVersion?: number;
   createdAt?: string;
   updatedAt?: string;
 }
