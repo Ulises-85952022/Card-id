@@ -1,19 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite lectura y escritura de las tarjetas ejecutivas digitales
-    match /cards/{cardId} {
-      allow read, write: if true;
-    }
-    
-    // Configuración global de la plataforma
-    match /platform_settings/{settingId} {
-      allow read, write: if true;
+
+    // Administrador: sesión de Google con correo verificado y registrado en la colección `admins`
+    // (el ID de cada documento es el correo en minúsculas, por ejemplo ulises@gmail.com).
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
     }
 
-    // Health check y pruebas de conexión
+    // Tarjetas: cualquiera puede verlas, solo un administrador puede crearlas o editarlas
+    match /cards/{cardId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /platform_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Lista de administradores: cada quien solo puede consultar su propio registro.
+    // Se edita únicamente desde la consola de Firebase.
+    match /admins/{email} {
+      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+      allow write: if false;
+    }
+
+    // Prueba de conexión: solo lectura
     match /test/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }
