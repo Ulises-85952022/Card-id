@@ -72,7 +72,10 @@ export const BrandsTab: React.FC = () => {
               <p className="mt-1 text-[14px] leading-relaxed text-acero line-clamp-3">{brand.description}</p>
 
               {subs.length > 0 && (
-                <ul className="mt-3 divide-y divide-linea border-y border-linea">
+                <p className="mt-4 text-[13px] font-semibold text-stone">Catálogos</p>
+              )}
+              {subs.length > 0 && (
+                <ul className="mt-1 divide-y divide-linea border-y border-linea">
                   {subs.map((sub) => (
                     <li key={sub.id}>
                       {sub.linkUrl ? (
@@ -101,14 +104,14 @@ export const BrandsTab: React.FC = () => {
                 >
                   Cotizar
                 </button>
-                {(brand.catalogUrl || brand.officialUrl) && (
+                {(brand.officialUrl || brand.catalogUrl) && (
                   <a
-                    href={brand.catalogUrl || brand.officialUrl}
+                    href={brand.officialUrl || brand.catalogUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 h-11 inline-flex items-center justify-center gap-1 rounded-lg border border-linea bg-white hover:border-stone text-tinta text-[15px] font-semibold"
                   >
-                    Catálogo <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                    Sitio web <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                   </a>
                 )}
               </div>

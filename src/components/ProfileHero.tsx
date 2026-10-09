@@ -117,9 +117,9 @@ export const WalletCard: React.FC<WalletCardProps> = ({ publicUrl }) => {
   };
 
   const logo = profile.companyLogoUrl ? (
-    <img src={profile.companyLogoUrl} alt={profile.company} className="h-4 w-auto max-w-[96px] object-contain" />
+    <img src={profile.companyLogoUrl} alt={profile.company} className="h-6 w-auto max-w-[110px] object-contain" />
   ) : profile.company?.toLowerCase().includes('ammega') ? (
-    <SmartBrandLogo brandId="ammega" className="h-4 w-auto" whiteBg={true} />
+    <SmartBrandLogo brandId="ammega" className="h-6 w-auto" whiteBg={true} />
   ) : (
     <span className="text-[13px] font-semibold text-tinta">{profile.company}</span>
   );
@@ -193,8 +193,8 @@ export const WalletCard: React.FC<WalletCardProps> = ({ publicUrl }) => {
                 <p className="mt-0.5 text-[13px] text-white/75 truncate">{profile.division || profile.company}</p>
               </div>
             </div>
-            {/* Línea de guía de la banda, en Picton Blue */}
-            <div className="absolute left-0 right-0 bottom-0 h-[5px] bg-picton" />
+            {/* Línea de guía de la banda, en el verde lima corporativo */}
+            <div className="absolute left-0 right-0 bottom-0 h-[5px] bg-lima" />
           </div>
 
           {/* REVERSO */}
@@ -233,7 +233,7 @@ export const WalletCard: React.FC<WalletCardProps> = ({ publicUrl }) => {
         className="mt-5 mx-auto flex items-center gap-2 text-[14px] text-white/80 hover:text-white"
         aria-pressed={flipped}
       >
-        <RotateCw className="w-4 h-4 text-picton" />
+        <RotateCw className="w-4 h-4 text-lima" />
         {flipped ? 'Toca la tarjeta para volver al frente' : 'Toca la tarjeta para ver mi código QR'}
       </button>
 

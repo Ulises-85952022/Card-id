@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 W,H=1200,630
-STONE=(0,87,98); HONDO=(0,61,69); PICTON=(66,183,230); NAVAJO=(255,222,171); WHITE=(255,255,255)
+STONE=(0,87,98); HONDO=(0,61,69); LIMA=(222,239,153); NAVAJO=(255,222,171); WHITE=(255,255,255)
 FONT='scripts/fonts/Archivo.ttf'
 def font(size,wdth,wght):
     f=ImageFont.truetype(FONT,size)
@@ -34,14 +34,15 @@ for row in range(-1,ch//36+2):
     for col in range(-1,cw//28+2):
         x=col*28+off+2; y=row*36
         cd.rounded_rectangle([x,y+2,x+24,y+16],radius=3,fill=(10,98,108))
-cd.rectangle([0,ch-12,cw,ch],fill=PICTON)
+cd.rectangle([0,ch-12,cw,ch],fill=LIMA)
 mask=Image.new('L',(cw,ch),0); ImageDraw.Draw(mask).rounded_rectangle([0,0,cw,ch],radius=36,fill=255)
 img.paste(card,(cx,cy),mask)
 d=ImageDraw.Draw(img)
-# chip de empresa
-fchip=font(30,100,600)
-d.rounded_rectangle([cx+54,cy+54,cx+54+190,cy+54+56],radius=10,fill=WHITE)
-d.text((cx+54+95,cy+54+28),'AMMEGA',font=fchip,fill=(15,42,46),anchor='mm')
+# chip de empresa con el logo oficial
+logo=Image.open('public/logos/ammega.png').convert('RGB')
+lh=60; logo=logo.resize((round(logo.width*lh/logo.height),lh),Image.LANCZOS)
+d.rounded_rectangle([cx+54,cy+50,cx+54+logo.width+36,cy+50+lh+28],radius=12,fill=WHITE)
+img.paste(logo,(cx+54+18,cy+50+14))
 # monograma / foto
 s=140; ax,ay=cx+cw-54-s,cy+54
 av='public/avatar.png'
