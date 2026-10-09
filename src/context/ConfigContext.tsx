@@ -10,7 +10,11 @@ import {
   withCurrentBrands,
   slugify,
 } from '../lib/cardsService';
-import { testFirestoreConnection } from '../lib/firebase';
+import { testFirestoreConnection, auth, db } from '../lib/firebase';
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+
+export type AdminStatus = 'checking' | 'signed-out' | 'admin' | 'not-admin';
 
 interface ConfigContextType {
   // Current active card data
@@ -56,6 +60,13 @@ interface ConfigContextType {
   setIsAdminMode: (enabled: boolean) => void;
   toggleAdminMode: () => void;
 
+  // Acceso de administrador
+  adminStatus: AdminStatus;
+  authEmail: string | null;
+  isLoginOpen: boolean;
+  setIsLoginOpen: (open: boolean) => void;
+  signInAsAdmin: () => Promise<string | null>;
+
   // Reset & Helpers
   resetToDefaults: () => void;
   exportJson: () => string;
@@ -63,7 +74,6 @@ interface ConfigContextType {
 }
 
 const STORAGE_KEY_PREFIX = 'ammega_card_local_';
-const ADMIN_SESSION_KEY = 'ammega_admin_authenticated';
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 
@@ -80,42 +90,89 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     testFirestoreConnection();
   }, []);
 
-  // Admin mode detection (?admin=1 or sessionStorage)
-  const [isAdminMode, setIsAdminModeState] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const adminParam = params.get('admin');
-        if (adminParam === '1' || adminParam === 'true') {
-          sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-          return true;
-        }
-        if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true') {
-          return true;
-        }
-      } catch (e) {
-        // ignore
-      }
+  // ---------- Acceso de administrador ----------
+  // ?admin=1 solo abre la pantalla de inicio de sesión; el permiso real lo da Firebase Auth
+  // más un documento en la colección `admins` con el correo como identificador.
+  const [adminStatus, setAdminStatus] = useState<AdminStatus>('checking');
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [isLoginOpen, setIsLoginOpen] = useState<boolean>(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get('admin');
+      return p === '1' || p === 'true';
+    } catch {
+      return false;
     }
-    return false;
   });
+  const isAdminMode = adminStatus === 'admin';
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user || !user.email) {
+        setAuthEmail(null);
+        setAdminStatus('signed-out');
+        return;
+      }
+      setAuthEmail(user.email);
+      setAdminStatus('checking');
+      try {
+        const snap = await getDoc(doc(db, 'admins', user.email.toLowerCase()));
+        setAdminStatus(snap.exists() ? 'admin' : 'not-admin');
+      } catch {
+        setAdminStatus('not-admin');
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  const removeAdminParam = () => {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('admin')) {
+        url.searchParams.delete('admin');
+        window.history.replaceState({}, '', url.pathname + url.search);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (adminStatus === 'admin') {
+      setIsLoginOpen(false);
+      removeAdminParam();
+    }
+  }, [adminStatus]);
+
+  /** Devuelve un mensaje de error para mostrar, o null si todo salió bien o se canceló */
+  const signInAsAdmin = async (): Promise<string | null> => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      await signInWithPopup(auth, provider);
+      return null;
+    } catch (err: any) {
+      const code: string = err?.code || '';
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        await signInWithRedirect(auth, provider);
+        return null;
+      }
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return null;
+      if (code === 'auth/unauthorized-domain')
+        return 'Este dominio no está autorizado en Firebase. Agrégalo en Authentication, Configuración, Dominios autorizados.';
+      if (code === 'auth/operation-not-allowed')
+        return 'El acceso con Google no está activado en Firebase. Actívalo en Authentication, Método de acceso.';
+      return 'No se pudo iniciar sesión. Revisa tu conexión e intenta de nuevo.';
+    }
+  };
 
   const setIsAdminMode = (enabled: boolean) => {
-    setIsAdminModeState(enabled);
-    if (typeof window !== 'undefined') {
-      try {
-        if (enabled) {
-          sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-        } else {
-          sessionStorage.removeItem(ADMIN_SESSION_KEY);
-          const url = new URL(window.location.href);
-          url.searchParams.delete('admin');
-          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
-        }
-      } catch (e) {
-        // ignore
-      }
+    if (enabled) {
+      setIsLoginOpen(true);
+      return;
     }
+    signOut(auth).catch(() => {});
+    setIsLoginOpen(false);
+    removeAdminParam();
   };
 
   const toggleAdminMode = () => {
@@ -176,13 +233,13 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Si se actualizaron las marcas, se guarda una sola vez en la nube y en el respaldo local
   useEffect(() => {
-    if (!pendingBrandsSave.current) return;
+    if (!pendingBrandsSave.current || adminStatus !== 'admin') return;
     pendingBrandsSave.current = false;
     try {
       localStorage.setItem(STORAGE_KEY_PREFIX + currentCard.slug, JSON.stringify(currentCard));
     } catch {}
     saveCardToCloud(currentCard).catch(() => {});
-  }, [currentCard]);
+  }, [currentCard, adminStatus]);
   const [cardsList, setCardsList] = useState<DigitalCard[]>([initialCache.card]);
   const [isLoading, setIsLoading] = useState<boolean>(!initialCache.isLoaded);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'saved' | 'error'>('idle');
@@ -613,6 +670,11 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAdminMode,
         setIsAdminMode,
         toggleAdminMode,
+        adminStatus,
+        authEmail,
+        isLoginOpen,
+        setIsLoginOpen,
+        signInAsAdmin,
         resetToDefaults,
         exportJson,
         importJson,

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import firebaseConfigData from '../../firebase-applet-config.json';
 
 // Initialize Firebase App
@@ -9,6 +10,9 @@ export const app = !getApps().length ? initializeApp(firebaseConfigData) : getAp
 export const db = firebaseConfigData.firestoreDatabaseId && firebaseConfigData.firestoreDatabaseId !== '(default)'
   ? getFirestore(app, firebaseConfigData.firestoreDatabaseId)
   : getFirestore(app);
+
+// Autenticación: solo los administradores registrados en la colección `admins` pueden escribir
+export const auth = getAuth(app);
 
 // Connection check as mandated by Firebase Skill
 export async function testFirestoreConnection() {

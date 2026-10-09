@@ -7,6 +7,7 @@ import { BrandsTab } from './components/BrandsTab';
 import { ShareModal } from './components/ShareModal';
 import { AdminModal } from './components/AdminModal';
 import { ProfileEditorSheet } from './components/ProfileEditorSheet';
+import { AdminLoginSheet } from './components/AdminLoginSheet';
 import { getPublicCardUrl } from './utils/publicUrl';
 
 function AppContent() {
@@ -82,7 +83,7 @@ function AppContent() {
             <Settings className="w-4 h-4" /> Panel
           </button>
           <button type="button" onClick={() => setIsAdminMode(false)} className="text-white/70 hover:text-white underline">
-            Salir
+            Cerrar sesión
           </button>
         </aside>
       )}
@@ -95,6 +96,7 @@ function AppContent() {
         role={profile.title}
         company={profile.company}
       />
+      <AdminLoginSheet />
       {isAdminMode && <ProfileEditorSheet isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} />}
       {isAdminMode && (
         <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} initialBrandId={adminInitialBrandId} />
