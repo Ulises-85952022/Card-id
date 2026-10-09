@@ -95,13 +95,13 @@ export const SmartBrandLogo: React.FC<SmartBrandLogoProps> = ({
   }
 
   return (
-    <div className={`relative inline-flex items-center justify-center ${className}`}>
+    <div className={`relative inline-flex shrink-0 items-center justify-center ${className}`}>
       <img
         src={currentSrc}
         alt={alt || BRAND_NAMES[brandId]}
         onError={handleImageError}
         onLoad={handleImageLoad}
-        className={`max-h-full max-w-full object-contain transition-opacity duration-150 ${
+        className={`block h-full w-auto max-w-none object-contain transition-opacity duration-150 ${
           hasImageLoaded ? 'opacity-100' : 'opacity-0'
         }`}
       />
