@@ -39,7 +39,7 @@ mask=Image.new('L',(cw,ch),0); ImageDraw.Draw(mask).rounded_rectangle([0,0,cw,ch
 img.paste(card,(cx,cy),mask)
 d=ImageDraw.Draw(img)
 # chip de empresa con el logo oficial
-logo=Image.open('public/logos/ammega.png').convert('RGB')
+logo=Image.open('src/assets/logos/ammega.png').convert('RGB')
 lh=60; logo=logo.resize((round(logo.width*lh/logo.height),lh),Image.LANCZOS)
 d.rounded_rectangle([cx+54,cy+50,cx+54+logo.width+36,cy+50+lh+28],radius=12,fill=WHITE)
 img.paste(logo,(cx+54+18,cy+50+14))

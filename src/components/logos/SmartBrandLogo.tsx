@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import ammegaLogo from '../../assets/logos/ammega.png';
+import ammeraalLogo from '../../assets/logos/ammeraal.png';
+import megadyneLogo from '../../assets/logos/megadyne.png';
+import jasonLogo from '../../assets/logos/jason.png';
 
 export type BrandLogoId = 'ammega' | 'ammeraal' | 'megadyne' | 'jason';
 
@@ -9,53 +13,25 @@ interface SmartBrandLogoProps {
   alt?: string;
 }
 
-const BRAND_FILE_CANDIDATES: Record<BrandLogoId, string[]> = {
-  ammega: [
-    '/logos/ammega.png',
-    '/logos/ammega.svg',
-    '/logos/ammega.jpg',
-    '/ammega.png',
-    './logos/ammega.png',
-    './ammega.png',
-  ],
-  ammeraal: [
-    '/logos/ammeraal.png',
-    '/logos/ammeraal.svg',
-    '/logos/ammeraal.jpg',
-    '/ammeraal.png',
-    './logos/ammeraal.png',
-    './ammeraal.png',
-  ],
-  megadyne: [
-    '/logos/megadyne.png',
-    '/logos/megadyne.svg',
-    '/logos/megadyne.jpg',
-    '/megadyne.png',
-    './logos/megadyne.png',
-    './megadyne.png',
-  ],
-  jason: [
-    '/logos/jason.png',
-    '/logos/jason.svg',
-    '/logos/jason.jpg',
-    '/jason.png',
-    './logos/jason.png',
-    './jason.png',
-  ],
+/** Logotipos oficiales tomados del portafolio de productos AMMEGA (09.2025) */
+const OFFICIAL_LOGOS: Record<BrandLogoId, string> = {
+  ammega: ammegaLogo,
+  ammeraal: ammeraalLogo,
+  megadyne: megadyneLogo,
+  jason: jasonLogo,
 };
 
 const BRAND_NAMES: Record<BrandLogoId, string> = {
   ammega: 'AMMEGA Group',
   ammeraal: 'Ammeraal Beltech',
   megadyne: 'Megadyne',
-  jason: 'Jason Industrial',
+  jason: 'Jason',
 };
 
 /**
- * SmartBrandLogo:
- * Solo muestra archivos de logo oficiales colocados en /public/logos/.
- * Si no hay archivo, muestra el nombre de la marca en texto plano.
- * Nunca dibuja una imitación del logotipo.
+ * Muestra el logotipo oficial de la marca. La imagen va empaquetada en el código, así que se ve
+ * desde el primer cuadro, sin depender de rutas de /public. Si por algo no carga, muestra el
+ * nombre de la marca en texto; nunca dibuja una imitación del logotipo.
  */
 export const SmartBrandLogo: React.FC<SmartBrandLogoProps> = ({
   brandId,
@@ -63,60 +39,27 @@ export const SmartBrandLogo: React.FC<SmartBrandLogoProps> = ({
   whiteBg = true,
   alt,
 }) => {
-  const [candidateIndex, setCandidateIndex] = useState(0);
-  const [hasImageLoaded, setHasImageLoaded] = useState(false);
-  const [hasFailedAllImages, setHasFailedAllImages] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const src = OFFICIAL_LOGOS[brandId];
 
-  const candidates = BRAND_FILE_CANDIDATES[brandId] || [];
-  const currentSrc = candidates[candidateIndex];
-
-  // Reset when brandId changes
-  useEffect(() => {
-    setCandidateIndex(0);
-    setHasImageLoaded(false);
-    setHasFailedAllImages(false);
-  }, [brandId]);
-
-  const handleImageError = () => {
-    if (candidateIndex < candidates.length - 1) {
-      setCandidateIndex((prev) => prev + 1);
-    } else {
-      setHasFailedAllImages(true);
-    }
-  };
-
-  const handleImageLoad = () => {
-    setHasImageLoaded(true);
-  };
-
-  // Sin archivo oficial: nombre de la marca en texto, nunca una imitación del logo
-  if (hasFailedAllImages || !currentSrc) {
-    return renderTextFallback(brandId, className, whiteBg);
+  if (failed || !src) {
+    return (
+      <span
+        className={`inline-flex items-center whitespace-nowrap text-sm font-semibold tracking-tight ${
+          whiteBg ? 'text-slate-900' : 'text-white'
+        } ${className}`}
+      >
+        {BRAND_NAMES[brandId]}
+      </span>
+    );
   }
 
   return (
-    <div className={`relative inline-flex shrink-0 items-center justify-center ${className}`}>
-      <img
-        src={currentSrc}
-        alt={alt || BRAND_NAMES[brandId]}
-        onError={handleImageError}
-        onLoad={handleImageLoad}
-        className={`block h-full w-auto max-w-none object-contain transition-opacity duration-150 ${
-          hasImageLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-    </div>
+    <img
+      src={src}
+      alt={alt || BRAND_NAMES[brandId]}
+      onError={() => setFailed(true)}
+      className={`block w-auto max-w-none object-contain shrink-0 ${className}`}
+    />
   );
 };
-
-function renderTextFallback(brandId: BrandLogoId, className: string, whiteBg: boolean) {
-  return (
-    <span
-      className={`inline-flex items-center whitespace-nowrap text-sm font-semibold tracking-tight ${
-        whiteBg ? 'text-slate-900' : 'text-white'
-      } ${className}`}
-    >
-      {BRAND_NAMES[brandId]}
-    </span>
-  );
-}
