@@ -116,7 +116,7 @@ export const QUOTE_FORMS: Record<string, QuoteSection> = {
         id: 'tipo',
         label: 'Tipo de banda',
         type: 'chips',
-        options: ['Sincrónica (MEGASYNC)', 'Abierta (MEGALINEAR)', 'En V', 'Poly V', 'No estoy seguro'],
+        options: ['Dentada (síncrona)', 'En V', 'Multicanal (Poly-V)', 'Plana', 'No estoy seguro'],
       },
       { id: 'material', label: 'Material', type: 'chips', options: ['Poliuretano', 'Hule / neopreno', 'No sé'] },
       { id: 'construccion', label: 'Construcción', type: 'chips', options: ['Cerrada (sinfín)', 'Abierta (por metro)'] },
@@ -136,24 +136,16 @@ export const QUOTE_FORMS: Record<string, QuoteSection> = {
   },
 
   jason: {
-    title: 'La manguera y sus conexiones',
+    title: 'La manguera',
     msgTitle: 'Especificaciones',
     fields: [
       {
         id: 'tipo',
         label: 'Tipo de manguera',
         type: 'chips',
-        options: ['Hidráulica', 'Industrial', 'No estoy seguro'],
+        options: ['Hidráulica', 'Industrial (agua / aire)', 'Química', 'Vapor', 'Alimenticia', 'Succión y descarga', 'No estoy seguro'],
       },
-      {
-        id: 'norma',
-        msg: 'Norma',
-        label: 'Norma o tipo',
-        type: 'text',
-        placeholder: 'Ej. SAE 100R2, 2SN, R12, succión y descarga',
-        hint: 'Viene impresa a lo largo de la manguera',
-      },
-      { id: 'fluido', msg: 'Conduce', label: '¿Qué conduce?', type: 'text', placeholder: 'Ej. aceite hidráulico, aire, agua, vapor, cemento' },
+      { id: 'fluido', msg: 'Fluido', label: '¿Qué conduce?', type: 'text', placeholder: 'Ej. aceite hidráulico, vapor, ácido sulfúrico, leche' },
       {
         id: 'diametro',
         label: 'Diámetro interior',
@@ -170,7 +162,7 @@ export const QUOTE_FORMS: Record<string, QuoteSection> = {
         id: 'conexiones',
         label: 'Conexiones',
         type: 'chips',
-        options: ['Sin conexiones', 'Hidráulicas crimpadas', 'Cam-Lock', 'Roscada (NPT / JIC)', 'Otra'],
+        options: ['Sin conexiones', 'Camlock', 'Roscada (NPT / JIC)', 'Brida', 'Otra'],
       },
       { id: 'ensamble', msg: 'Entrega', label: 'Entrega', type: 'chips', options: ['Solo manguera', 'Ensamble armado'] },
     ],

@@ -3,14 +3,15 @@ import { ArrowUpRight, Settings2 } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
 import { BrandInfo } from '../types';
 import { SmartBrandLogo, BrandLogoId } from './logos/SmartBrandLogo';
+import { QuoteSheet } from './QuoteSheet';
 
 const KNOWN_LOGOS = ['ammeraal', 'megadyne', 'jason', 'ammega'];
 
 export const BrandsTab: React.FC = () => {
   const { profile, brands, openAdminWithBrand, isAdminMode } = useAppConfig();
   const [active, setActive] = useState(0);
+  const [quoteBrand, setQuoteBrand] = useState<BrandInfo | null>(null);
   const trackRef = useRef<HTMLUListElement>(null);
-  const firstName = profile.name.trim().split(' ')[0] || '';
 
   const renderLogo = (brand: BrandInfo) => {
     if (brand.logoUrl) return <img src={brand.logoUrl} alt={brand.name} className="h-5 w-auto max-w-[110px] object-contain" />;
@@ -35,7 +36,7 @@ export const BrandsTab: React.FC = () => {
     <section aria-labelledby="h-marcas">
       <div className="px-5 sm:px-6 flex items-baseline justify-between mb-3">
         <h2 id="h-marcas" className="text-[20px] font-semibold text-tinta">
-          Lo que manejo
+          Líneas de producto
         </h2>
         {isAdminMode ? (
           <button type="button" onClick={() => openAdminWithBrand()} className="text-[14px] text-stone inline-flex items-center gap-1 hover:underline">
@@ -93,16 +94,13 @@ export const BrandsTab: React.FC = () => {
               )}
 
               <div className="mt-auto pt-4 flex gap-2">
-                <a
-                  href={`https://wa.me/${profile.whatsappNumber}?text=${encodeURIComponent(
-                    `Hola ${firstName}, quiero cotizar ${brand.name}. Lo necesito para: `
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setQuoteBrand(brand)}
                   className="flex-1 h-11 inline-flex items-center justify-center rounded-lg bg-stone hover:bg-stone-hondo text-white text-[15px] font-semibold"
                 >
                   Cotizar
-                </a>
+                </button>
                 {(brand.catalogUrl || brand.officialUrl) && (
                   <a
                     href={brand.catalogUrl || brand.officialUrl}
@@ -139,6 +137,8 @@ export const BrandsTab: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {quoteBrand && <QuoteSheet brand={quoteBrand} onClose={() => setQuoteBrand(null)} />}
     </section>
   );
 };
