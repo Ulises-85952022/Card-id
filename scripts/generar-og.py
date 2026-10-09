@@ -1,38 +1,56 @@
 from PIL import Image, ImageDraw, ImageFont
-W,H=1200,630
-TINTA=(23,32,38); ACERO=(86,99,109); BANDA=(13,78,140); WHITE=(255,255,255)
-img=Image.new('RGB',(W,H),WHITE)
-d=ImageDraw.Draw(img,'RGBA')
-band_h=220
-d.rectangle([0,0,W,band_h],fill=TINTA)
-# eslabones de banda modular desfasados (escala 2x del tile web)
-tw,th=56,72
-for row in range(-1, band_h//36+2):
-    y=row*36
-    off=0 if row%2==0 else -28
-    for col in range(-1, W//tw+2):
-        x=col*tw+off+4
-        d.rounded_rectangle([x,y+4,x+48,y+32],radius=6,fill=(255,255,255,23))
-d.rectangle([0,band_h,W,H],fill=WHITE)
-# monograma en lugar de foto (se reemplaza si hay public/avatar.png)
 import os
-av=None
-if os.path.exists('public/avatar.png'):
-    av=Image.open('public/avatar.png').convert('RGB')
-x0,y0,s=80,band_h-90,180
-d.rounded_rectangle([x0-8,y0-8,x0+s+8,y0+s+8],radius=28,fill=WHITE)
-if av:
-    av=av.resize((s,s)); mask=Image.new('L',(s,s),0); ImageDraw.Draw(mask).rounded_rectangle([0,0,s,s],radius=22,fill=255); img.paste(av,(x0,y0),mask)
+W,H=1200,630
+STONE=(0,87,98); HONDO=(0,61,69); PICTON=(66,183,230); NAVAJO=(255,222,171); WHITE=(255,255,255)
+FONT='scripts/fonts/Archivo.ttf'
+def font(size,wdth,wght):
+    f=ImageFont.truetype(FONT,size)
+    try:
+        axes=f.get_variation_axes()
+        vals=[]
+        for a in axes:
+            n=a.get('name',b'')
+            n=n.decode() if isinstance(n,bytes) else n
+            vals.append(wdth if 'idth' in n else wght)
+        f.set_variation_by_axes(vals)
+    except Exception as e: print('var',e)
+    return f
+img=Image.new('RGB',(W,H),HONDO)
+d=ImageDraw.Draw(img)
+for row in range(-1,H//36+2):
+    off=0 if row%2==0 else -14
+    for col in range(-1,W//28+2):
+        x=col*28+off+2; y=row*36
+        d.rounded_rectangle([x,y+2,x+24,y+16],radius=3,fill=(6,68,76))
+# tarjeta
+cx,cy,cw,ch=150,95,900,440
+sh=Image.new('RGBA',(W,H),(0,0,0,0)); ImageDraw.Draw(sh).rounded_rectangle([cx+10,cy+30,cx+cw+10,cy+ch+30],radius=40,fill=(0,0,0,110))
+from PIL import ImageFilter
+img.paste(sh.filter(ImageFilter.GaussianBlur(30)),(0,0),sh.filter(ImageFilter.GaussianBlur(30)))
+card=Image.new('RGB',(cw,ch),STONE)
+cd=ImageDraw.Draw(card)
+for row in range(-1,ch//36+2):
+    off=0 if row%2==0 else -14
+    for col in range(-1,cw//28+2):
+        x=col*28+off+2; y=row*36
+        cd.rounded_rectangle([x,y+2,x+24,y+16],radius=3,fill=(10,98,108))
+cd.rectangle([0,ch-12,cw,ch],fill=PICTON)
+mask=Image.new('L',(cw,ch),0); ImageDraw.Draw(mask).rounded_rectangle([0,0,cw,ch],radius=36,fill=255)
+img.paste(card,(cx,cy),mask)
+d=ImageDraw.Draw(img)
+# chip de empresa
+fchip=font(30,100,600)
+d.rounded_rectangle([cx+54,cy+54,cx+54+190,cy+54+56],radius=10,fill=WHITE)
+d.text((cx+54+95,cy+54+28),'AMMEGA',font=fchip,fill=(15,42,46),anchor='mm')
+# monograma / foto
+s=140; ax,ay=cx+cw-54-s,cy+54
+av='public/avatar.png'
+if os.path.exists(av):
+    a=Image.open(av).convert('RGB').resize((s,s)); m=Image.new('L',(s,s),0); ImageDraw.Draw(m).rounded_rectangle([0,0,s,s],radius=30,fill=255); img.paste(a,(ax,ay),m)
 else:
-    d.rounded_rectangle([x0,y0,x0+s,y0+s],radius=22,fill=TINTA)
-    f=ImageFont.truetype('scripts/fonts/BarlowSemiCondensed-Bold.ttf',72)
-    d.text((x0+s/2,y0+s/2),'UH',font=f,fill=WHITE,anchor='mm')
-fn=ImageFont.truetype('scripts/fonts/BarlowSemiCondensed-Bold.ttf',92)
-ft=ImageFont.truetype('scripts/fonts/Barlow-Medium.ttf',44)
-fc=ImageFont.truetype('scripts/fonts/Barlow-Regular.ttf',32)
-d.text((300,250),'Ulises Hernández',font=fn,fill=TINTA,anchor='lt')
-d.text((302,360),'Key Account Manager',font=ft,fill=TINTA,anchor='lt')
-d.text((302,416),'AMMEGA Group, Belting & Industrial Solutions',font=fc,fill=ACERO,anchor='lt')
-d.rectangle([80,520,W-80,522],fill=(215,220,223))
-d.text((80,560),'Bandas transportadoras, correas de transmisión y mangueras industriales',font=fc,fill=ACERO,anchor='lm')
+    d.rounded_rectangle([ax,ay,ax+s,ay+s],radius=30,fill=(0,42,48))
+    d.text((ax+s/2,ay+s/2),'UH',font=font(52,125,750),fill=NAVAJO,anchor='mm')
+d.text((cx+54,cy+ch-170),'Ulises Hernández',font=font(70,125,750),fill=WHITE,anchor='ls')
+d.text((cx+56,cy+ch-110),'Key Account Manager',font=font(38,100,500),fill=NAVAJO,anchor='ls')
+d.text((cx+56,cy+ch-62),'Belting & Industrial Solutions',font=font(30,100,400),fill=(205,222,224),anchor='ls')
 img.save('public/og.png',optimize=True)

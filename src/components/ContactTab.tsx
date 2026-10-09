@@ -46,7 +46,7 @@ export const ContactTab: React.FC = () => {
 
   return (
     <section aria-labelledby="h-contacto" className="px-5 sm:px-6">
-      <h2 id="h-contacto" className="font-cond font-semibold text-[21px] text-tinta mb-1">
+      <h2 id="h-contacto" className="text-[20px] font-semibold text-tinta mb-1">
         Contacto
       </h2>
       <ul className="divide-y divide-linea border-y border-linea">
@@ -59,14 +59,14 @@ export const ContactTab: React.FC = () => {
               className="flex-1 min-w-0 py-3.5 grid grid-cols-[68px_1fr] items-baseline gap-2 group"
             >
               <span className="text-[14px] text-acero">{row.label}</span>
-              <span className="text-[16px] font-medium text-tinta truncate group-hover:text-banda group-hover:underline underline-offset-2">
+              <span className="text-[16px] font-medium text-tinta truncate group-hover:text-stone group-hover:underline underline-offset-2">
                 {row.value}
               </span>
             </a>
             <button
               type="button"
               onClick={() => handleCopy(row.id, row.copy)}
-              className="shrink-0 w-10 h-10 -mr-2 inline-flex items-center justify-center rounded-md text-acero hover:text-tinta hover:bg-concreto"
+              className="shrink-0 w-10 h-10 -mr-2 inline-flex items-center justify-center rounded-md text-acero hover:text-tinta hover:bg-niebla"
               aria-label={`Copiar ${row.label.toLowerCase()}`}
               title="Copiar"
             >

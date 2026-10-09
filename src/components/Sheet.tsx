@@ -26,11 +26,11 @@ export const Sheet: React.FC<SheetProps> = ({ title, onClose, children }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-cond font-semibold text-[21px] text-tinta">{title}</h3>
+          <h3 className="text-[20px] font-semibold text-tinta">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="w-10 h-10 -mr-2 inline-flex items-center justify-center rounded-md text-acero hover:bg-concreto hover:text-tinta"
+            className="w-10 h-10 -mr-2 inline-flex items-center justify-center rounded-md text-acero hover:bg-niebla hover:text-tinta"
             aria-label="Cerrar"
             autoFocus
           >

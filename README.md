@@ -19,7 +19,7 @@ public/
 ```
 
 *Formatos compatibles:* `.png`, `.svg`, `.jpg`, `.webp`.  
-*(Los logotipos oficiales de AMMEGA, Ammeraal Beltech, Megadyne y Jason ya están en `src/assets/logos/`. Para cambiar uno, reemplaza el PNG con el mismo nombre).*
+*(Usa únicamente los archivos oficiales de cada marca. Si falta alguno, la tarjeta muestra el nombre de la marca en texto; no se dibujan imitaciones del logotipo).*
 
 ---
 
