@@ -1,7 +1,7 @@
 import { USER_PROFILE } from '../data';
 import { UserProfile } from '../types';
 
-export function generateVCardString(customProfile?: UserProfile): string {
+export function generateVCardString(customProfile?: UserProfile, quoteUrl?: string): string {
   const p = customProfile || USER_PROFILE;
   const nameParts = p.name.split(' ');
   const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
@@ -18,15 +18,16 @@ export function generateVCardString(customProfile?: UserProfile): string {
     `EMAIL;TYPE=INTERNET,PREF:${p.email}`,
     `URL;TYPE=WORK:${p.companyWebsite || p.brandsUrl || p.corporateUrl || ''}`,
     `ADR;TYPE=WORK:;;${p.coverageZone || p.location || ''};;;;`,
-    `NOTE:${p.title} en ${p.company}.${p.companyDescription ? ' ' + p.companyDescription : ''} WhatsApp: ${p.whatsappNumber}`,
+    `NOTE:${p.title} en ${p.company}.${p.companyDescription ? ' ' + p.companyDescription : ''} WhatsApp: ${p.whatsappNumber}${quoteUrl ? '. Para cotizar aquí: ' + quoteUrl : ''}`,
+    ...(quoteUrl ? [`item1.URL;type=pref:${quoteUrl}`, 'item1.X-ABLabel:Para cotizar aquí'] : []),
     'END:VCARD',
   ];
 
   return lines.join('\r\n');
 }
 
-export function downloadVCard(customProfile?: UserProfile): void {
-  const vcardText = generateVCardString(customProfile);
+export function downloadVCard(customProfile?: UserProfile, quoteUrl?: string): void {
+  const vcardText = generateVCardString(customProfile, quoteUrl);
   const blob = new Blob([vcardText], { type: 'text/vcard;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

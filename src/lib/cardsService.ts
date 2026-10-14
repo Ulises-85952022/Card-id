@@ -149,7 +149,7 @@ export async function getCardBySlug(slug: string): Promise<DigitalCard | null> {
     })();
 
     // 2. Race with 2500ms timeout to prevent hanging on slow network
-    const result = await raceWithTimeout(fetchPromise, 2500, null);
+    const result = await raceWithTimeout(fetchPromise, 6000, null);
     if (result) {
       cardMemoryCache.set(cleanSlug, result);
     }

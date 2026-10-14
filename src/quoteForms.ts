@@ -32,10 +32,8 @@ export const CONTACT_SECTION: QuoteSection = {
   title: 'Tus datos',
   msgTitle: 'Contacto',
   fields: [
-    { id: 'nombre', label: 'Nombre', type: 'text', required: true, half: true, placeholder: 'Tu nombre' },
-    { id: 'empresa', label: 'Empresa', type: 'text', required: true, half: true, placeholder: 'Empresa' },
-    { id: 'planta', msg: 'Planta', label: 'Ciudad o planta', type: 'text', placeholder: 'Ej. Planta El Salto, Jalisco' },
-    { id: 'urgencia', msg: 'Urgencia', label: '¿Para cuándo lo necesitas?', type: 'chips', options: ['Línea detenida', 'Esta semana', 'Planeado'] },
+    { id: 'nombre', label: 'Nombre', type: 'text', half: true, placeholder: 'Tu nombre' },
+    { id: 'empresa', label: 'Empresa', type: 'text', half: true, placeholder: 'Empresa' },
   ],
 };
 

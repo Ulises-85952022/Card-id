@@ -4,6 +4,7 @@ import { UserPlus, Phone, Mail, Share2, Camera, Check, RotateCw, Download } from
 import { useAppConfig } from '../context/ConfigContext';
 import { SmartBrandLogo } from './logos/SmartBrandLogo';
 import { downloadVCard } from '../utils/vcard';
+import { getPublicCardUrl } from '../utils/publicUrl';
 import { AvatarModal } from './AvatarModal';
 import { CompanyLogoModal } from './CompanyLogoModal';
 import { compressImage } from '../utils/imageCompressor';
@@ -269,13 +270,13 @@ export const WalletCard: React.FC<WalletCardProps> = ({ publicUrl }) => {
 /* ------------------------------------------------------------------ */
 
 export const QuickActions: React.FC<{ onOpenShare: () => void }> = ({ onOpenShare }) => {
-  const { profile } = useAppConfig();
+  const { profile, currentCard } = useAppConfig();
   const [saved, setSaved] = useState(false);
   const firstName = profile.name.trim().split(' ')[0] || '';
   const email = profile.email;
 
   const handleSave = () => {
-    downloadVCard(profile);
+    downloadVCard(profile, getPublicCardUrl(currentCard.slug));
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };

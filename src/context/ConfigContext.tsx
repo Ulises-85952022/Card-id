@@ -190,10 +190,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (local) {
         const parsed = JSON.parse(local);
         if (parsed && parsed.profile) {
-          const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
-          if (standaloneAvatar && !parsed.profile.avatarUrl) {
-            parsed.profile.avatarUrl = standaloneAvatar;
-          }
           return { card: parsed, isLoaded: true };
         }
       }
@@ -204,12 +200,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Default primary admin is pre-compiled for instant display
     if (targetSlug === 'ulises-hernandez' || !targetSlug) {
       const defaultAdmin = getDefaultAdminCard();
-      try {
-        const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
-        if (standaloneAvatar) {
-          defaultAdmin.profile.avatarUrl = standaloneAvatar;
-        }
-      } catch (e) {}
       return { card: defaultAdmin, isLoaded: true };
     }
 
@@ -293,15 +283,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           }
 
-          // Check standalone avatar cache
-          const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
-          if (standaloneAvatar && !finalCard.profile.avatarUrl) {
-            finalCard = {
-              ...finalCard,
-              profile: { ...finalCard.profile, avatarUrl: standaloneAvatar },
-            };
-            saveCardToCloud(finalCard).catch(() => {});
-          }
         } catch (e) {
           // ignore parsing error
         }
@@ -311,9 +292,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Keep local backups in sync
         try {
           localStorage.setItem(STORAGE_KEY_PREFIX + finalCard.slug, JSON.stringify(finalCard));
-          if (finalCard.profile.avatarUrl) {
-            localStorage.setItem('ammega_user_avatar', finalCard.profile.avatarUrl);
-          }
         } catch (e) {
           // ignore
         }
@@ -332,14 +310,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } else {
           // If neither exists, load default admin
           const defaultAdmin = getDefaultAdminCard();
-          // Check if standalone avatar exists to restore
-          try {
-            const standaloneAvatar = localStorage.getItem('ammega_user_avatar');
-            if (standaloneAvatar) {
-              defaultAdmin.profile.avatarUrl = standaloneAvatar;
-            }
-          } catch (e) {}
-
           setCurrentCard(defaultAdmin);
           // Seed cloud with default admin card if target was admin
           if (targetSlug === 'ulises-hernandez') {
@@ -396,13 +366,6 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       try {
         localStorage.setItem(STORAGE_KEY_PREFIX + updated.slug, JSON.stringify(updated));
-        if (partial.avatarUrl !== undefined) {
-          if (partial.avatarUrl) {
-            localStorage.setItem('ammega_user_avatar', partial.avatarUrl);
-          } else {
-            localStorage.removeItem('ammega_user_avatar');
-          }
-        }
       } catch (e) {
         console.warn('LocalStorage quota warning:', e);
       }
