@@ -16,10 +16,9 @@ export function generateVCardString(customProfile?: UserProfile, quoteUrl?: stri
     `TITLE:${p.title}`,
     `TEL;TYPE=CELL,VOICE,PREF:${p.phoneRaw}`,
     `EMAIL;TYPE=INTERNET,PREF:${p.email}`,
-    `URL;TYPE=WORK:${p.companyWebsite || p.brandsUrl || p.corporateUrl || ''}`,
+    `URL;TYPE=WORK:${quoteUrl || p.companyWebsite || p.brandsUrl || p.corporateUrl || ''}`,
     `ADR;TYPE=WORK:;;${p.coverageZone || p.location || ''};;;;`,
     `NOTE:${p.title} en ${p.company}.${p.companyDescription ? ' ' + p.companyDescription : ''} WhatsApp: ${p.whatsappNumber}${quoteUrl ? '. Para cotizar aquí: ' + quoteUrl : ''}`,
-    ...(quoteUrl ? [`item1.URL;type=pref:${quoteUrl}`, 'item1.X-ABLabel:Para cotizar aquí'] : []),
     'END:VCARD',
   ];
 
