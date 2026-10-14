@@ -395,63 +395,83 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
-  // Add subcategory in state
+  // Guarda la tarjeta con el cambio ya aplicado (no usar saveCurrentCard aquí: leería el estado anterior)
+  const persistCardChange = (updated: DigitalCard) => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PREFIX + updated.slug, JSON.stringify(updated));
+    } catch (e) {}
+    saveCardToCloud(updated).catch((err) => console.warn('Error guardando categorías:', err));
+  };
+
+  // Add subcategory in state and cloud
   const addSubcategory = (brandId: string, subcategory: Omit<BrandSubcategory, 'id'>) => {
     const newId = `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const fullSubcategory: BrandSubcategory = {
       ...subcategory,
       id: newId,
     };
-    setCurrentCard((prev) => ({
-      ...prev,
-      brands: prev.brands.map((b) => {
-        if (b.id !== brandId) return b;
-        const currentSubs = b.subcategories || [];
-        return {
-          ...b,
-          subcategories: [...currentSubs, fullSubcategory],
-        };
-      }),
-      updatedAt: new Date().toISOString(),
-    }));
+    setCurrentCard((prev) => {
+      const updated: DigitalCard = {
+        ...prev,
+        brands: prev.brands.map((b) => {
+          if (b.id !== brandId) return b;
+          const currentSubs = b.subcategories || [];
+          return {
+            ...b,
+            subcategories: [...currentSubs, fullSubcategory],
+          };
+        }),
+        updatedAt: new Date().toISOString(),
+      };
+      persistCardChange(updated);
+      return updated;
+    });
   };
 
-  // Update subcategory in state
+  // Update subcategory in state and cloud
   const updateSubcategory = (
     brandId: string,
     subcategoryId: string,
     partial: Partial<BrandSubcategory>
   ) => {
-    setCurrentCard((prev) => ({
-      ...prev,
-      brands: prev.brands.map((b) => {
-        if (b.id !== brandId) return b;
-        const currentSubs = b.subcategories || [];
-        return {
-          ...b,
-          subcategories: currentSubs.map((s) =>
-            s.id === subcategoryId ? { ...s, ...partial } : s
-          ),
-        };
-      }),
-      updatedAt: new Date().toISOString(),
-    }));
+    setCurrentCard((prev) => {
+      const updated: DigitalCard = {
+        ...prev,
+        brands: prev.brands.map((b) => {
+          if (b.id !== brandId) return b;
+          const currentSubs = b.subcategories || [];
+          return {
+            ...b,
+            subcategories: currentSubs.map((s) =>
+              s.id === subcategoryId ? { ...s, ...partial } : s
+            ),
+          };
+        }),
+        updatedAt: new Date().toISOString(),
+      };
+      persistCardChange(updated);
+      return updated;
+    });
   };
 
-  // Delete subcategory in state
+  // Delete subcategory in state and cloud
   const deleteSubcategory = (brandId: string, subcategoryId: string) => {
-    setCurrentCard((prev) => ({
-      ...prev,
-      brands: prev.brands.map((b) => {
-        if (b.id !== brandId) return b;
-        const currentSubs = b.subcategories || [];
-        return {
-          ...b,
-          subcategories: currentSubs.filter((s) => s.id !== subcategoryId),
-        };
-      }),
-      updatedAt: new Date().toISOString(),
-    }));
+    setCurrentCard((prev) => {
+      const updated: DigitalCard = {
+        ...prev,
+        brands: prev.brands.map((b) => {
+          if (b.id !== brandId) return b;
+          const currentSubs = b.subcategories || [];
+          return {
+            ...b,
+            subcategories: currentSubs.filter((s) => s.id !== subcategoryId),
+          };
+        }),
+        updatedAt: new Date().toISOString(),
+      };
+      persistCardChange(updated);
+      return updated;
+    });
   };
 
   // Save current active card to Cloud Firestore

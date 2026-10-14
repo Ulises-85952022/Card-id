@@ -171,16 +171,12 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
     setIsFormOpen(false);
     setEditingSubId(null);
-
-    // Auto-persist to cloud
-    await saveCurrentCard();
   };
 
   const handleDeleteSub = async (subId: string) => {
     if (confirm('¿Deseas eliminar esta subcategoría?')) {
       deleteSubcategory(selectedBrand.id, subId);
       showToast('Subcategoría eliminada. Guardando...');
-      await saveCurrentCard();
     }
   };
 
