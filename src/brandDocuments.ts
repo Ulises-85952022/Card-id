@@ -28,4 +28,13 @@ export const BRAND_DOCUMENTS: Record<string, BrandDocument[]> = {
       meta: 'PDF · 2 págs.',
     },
   ],
+  megadyne: [
+    {
+      title: 'Esquema de medidas de bandas síncronas',
+      description:
+        'Cómo identificar y medir una banda dentada: paso, longitud, ancho y tipo de diente, con la tabla de pasos por medida de 10 dientes. Llénala y envíala con tu cotización.',
+      url: '/docs/esquema-medidas-bandas-sincronas.pdf',
+      meta: 'PDF · 2 págs.',
+    },
+  ],
 };
