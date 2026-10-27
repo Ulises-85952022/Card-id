@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { ArrowUpRight, Settings2 } from 'lucide-react';
+import { ArrowUpRight, FileText, Settings2 } from 'lucide-react';
 import { useAppConfig } from '../context/ConfigContext';
 import { BrandInfo } from '../types';
 import { SmartBrandLogo, BrandLogoId } from './logos/SmartBrandLogo';
 import { QuoteSheet } from './QuoteSheet';
+import { BRAND_DOCUMENTS } from '../brandDocuments';
 
 const KNOWN_LOGOS = ['ammeraal', 'megadyne', 'jason', 'ammega'];
 
@@ -57,6 +58,7 @@ export const BrandsTab: React.FC = () => {
       >
         {brands.map((brand) => {
           const subs = (brand.subcategories || []).slice(0, 3);
+          const docs = BRAND_DOCUMENTS[brand.id] || [];
           return (
             <li
               key={brand.id}
@@ -94,6 +96,31 @@ export const BrandsTab: React.FC = () => {
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {docs.length > 0 && (
+                <>
+                  <p className="mt-4 text-[13px] font-semibold text-stone">Documentos</p>
+                  <ul className="mt-1.5 space-y-2">
+                    {docs.map((doc) => (
+                      <li key={doc.url}>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start gap-3 rounded-xl border border-linea bg-white p-3 hover:border-stone"
+                        >
+                          <FileText className="w-5 h-5 mt-0.5 shrink-0 text-stone" aria-hidden="true" />
+                          <span className="min-w-0">
+                            <span className="block text-[14px] font-semibold leading-snug text-tinta">{doc.title}</span>
+                            <span className="block mt-0.5 text-[13px] leading-snug text-acero line-clamp-2">{doc.description}</span>
+                            <span className="block mt-1 text-[12px] font-medium text-stone">{doc.meta}</span>
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
 
               <div className="mt-auto pt-4 flex gap-2">
