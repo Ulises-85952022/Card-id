@@ -2,11 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Administrador: sesión de Google con correo verificado y registrado en la colección `admins`
-    // (el ID de cada documento es el correo en minúsculas, por ejemplo ulises@gmail.com).
+    // Administrador: sesión iniciada (correo y contraseña de Firebase) con un correo registrado
+    // en la colección `admins` (el ID de cada documento es el correo en minúsculas).
+    // Importante: desactiva el registro público en Authentication > Configuración > Acciones del
+    // usuario, para que nadie pueda crear cuentas por su cuenta.
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email_verified == true
+        && request.auth.token.email != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
     }
 

@@ -11,7 +11,15 @@ import {
   slugify,
 } from '../lib/cardsService';
 import { testFirestoreConnection, auth, db } from '../lib/firebase';
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 export type AdminStatus = 'checking' | 'signed-out' | 'admin' | 'not-admin';
@@ -66,6 +74,8 @@ interface ConfigContextType {
   isLoginOpen: boolean;
   setIsLoginOpen: (open: boolean) => void;
   signInAsAdmin: () => Promise<string | null>;
+  signInWithEmail: (email: string, password: string) => Promise<string | null>;
+  resetAdminPassword: (email: string) => Promise<string | null>;
 
   // Reset & Helpers
   resetToDefaults: () => void;
@@ -162,6 +172,43 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (code === 'auth/operation-not-allowed')
         return 'El acceso con Google no está activado en Firebase. Actívalo en Authentication, Método de acceso.';
       return 'No se pudo iniciar sesión. Revisa tu conexión e intenta de nuevo.';
+    }
+  };
+
+  /** Entrada con correo y contraseña de Firebase. Devuelve un mensaje de error o null si entró. */
+  const signInWithEmail = async (email: string, password: string): Promise<string | null> => {
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      return null;
+    } catch (err: any) {
+      const code: string = err?.code || '';
+      if (
+        code === 'auth/invalid-credential' ||
+        code === 'auth/wrong-password' ||
+        code === 'auth/user-not-found' ||
+        code === 'auth/invalid-email'
+      )
+        return 'El correo o la contraseña no coinciden.';
+      if (code === 'auth/too-many-requests')
+        return 'Demasiados intentos. Espera unos minutos o restablece tu contraseña.';
+      if (code === 'auth/operation-not-allowed')
+        return 'El acceso con correo no está activado en Firebase. Actívalo en Authentication, Método de acceso.';
+      if (code === 'auth/network-request-failed') return 'No hay conexión. Revisa tu internet e intenta de nuevo.';
+      return 'No se pudo iniciar sesión. Intenta de nuevo.';
+    }
+  };
+
+  /** Envía el correo para restablecer la contraseña. Devuelve un mensaje de error o null si se envió. */
+  const resetAdminPassword = async (email: string): Promise<string | null> => {
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      return null;
+    } catch (err: any) {
+      const code: string = err?.code || '';
+      if (code === 'auth/invalid-email' || code === 'auth/missing-email') return 'Escribe un correo válido.';
+      if (code === 'auth/network-request-failed') return 'No hay conexión. Revisa tu internet e intenta de nuevo.';
+      // Por seguridad no se revela si el correo existe o no
+      return null;
     }
   };
 
@@ -658,6 +705,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isLoginOpen,
         setIsLoginOpen,
         signInAsAdmin,
+        signInWithEmail,
+        resetAdminPassword,
         resetToDefaults,
         exportJson,
         importJson,
