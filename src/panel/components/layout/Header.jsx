@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bell, ChevronsUpDown, LogOut, Menu, Moon, Search, Sun, User, CreditCard, Building2, BellOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@panel/auth/AuthContext";
 import { Button } from "@panel/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -70,37 +71,50 @@ function Notifications() {
   );
 }
 
+function getInitials(name) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
 function ProfileMenu() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const toggleTheme = () => {
     const next = !dark;
     document.documentElement.classList.toggle("dark", next);
     setDark(next);
   };
+  const displayName = user?.displayName || user?.email || "Mi cuenta";
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="flex items-center gap-2.5 rounded-xl p-1 pr-2 transition-colors hover:bg-accent" aria-label="Menú de perfil">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-caption font-bold text-secondary-foreground">UD</span>
+          <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-caption font-bold text-secondary-foreground">{getInitials(displayName)}</span>
           <span className="hidden text-left lg:block">
-            <span className="block text-body-sm font-semibold leading-tight">Usuario demo</span>
-            <span className="block text-caption leading-tight text-muted-foreground">Administrador</span>
+            <span className="block max-w-40 truncate text-body-sm font-semibold leading-tight">{displayName}</span>
+            <span className="block max-w-40 truncate text-caption leading-tight text-muted-foreground">{user?.email}</span>
           </span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
         <DropdownMenuItem asChild>
-          <Link to="/app/settings"><User /> Perfil</Link>
+          <Link to="/settings"><User /> Perfil</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/app/settings"><CreditCard /> Facturación</Link>
+          <Link to="/settings"><CreditCard /> Facturación</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); toggleTheme(); }}>
           {dark ? <Sun /> : <Moon />} {dark ? "Tema claro" : "Tema oscuro"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem destructive disabled>
+        <DropdownMenuItem destructive onSelect={handleSignOut}>
           <LogOut /> Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>

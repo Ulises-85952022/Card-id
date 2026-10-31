@@ -30,6 +30,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Perfil del usuario del panel (nombre, empresa): cada quien solo lee y escribe el suyo
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Prueba de conexión: solo lectura
     match /test/{docId} {
       allow read: if true;
