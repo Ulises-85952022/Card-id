@@ -16,6 +16,7 @@ import {
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
+import { ensureProfile } from "../../lib/db/profileService";
 
 const AuthContext = createContext(null);
 
@@ -68,6 +69,8 @@ export function AuthProvider({ children }) {
       email: newUser.email,
       createdAt: serverTimestamp(),
     });
+    // Perfil de la capa de datos (saas_profiles) con nombre y empresa ya guardados
+    await ensureProfile(newUser, { fullName, companyName });
     // Best effort: si el correo de verificación falla, la cuenta ya quedó creada
     sendEmailVerification(newUser).catch(() => {});
   };

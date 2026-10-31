@@ -12,6 +12,71 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
     }
 
+    // ---------- Modelo SaaS (colecciones saas_*) ----------
+    // Firestore no tiene claves foráneas: cada regla comprueba la tarjeta o el perfil padre
+    // con get(). Las restricciones únicas se resuelven con saas_slugs (ver src/lib/db/slugs.ts).
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(/databases/$(database)/documents/saas_profiles/$(request.auth.uid));
+    }
+
+    function myAgency() {
+      return get(/databases/$(database)/documents/saas_profiles/$(request.auth.uid)).data.get('agency_id', null);
+    }
+
+    // El uid pertenece a una subcuenta de mi misma agencia
+    function sameAgencyAs(uid) {
+      return hasProfile()
+        && myAgency() != null
+        && exists(/databases/$(database)/documents/saas_profiles/$(uid))
+        && get(/databases/$(database)/documents/saas_profiles/$(uid)).data.get('agency_id', null) == myAgency();
+    }
+
+    function isAgencyAdminOf(uid) {
+      return hasProfile()
+        && get(/databases/$(database)/documents/saas_profiles/$(request.auth.uid)).data.role == 'agency_admin'
+        && sameAgencyAs(uid);
+    }
+
+    function cardIsActive(cardId) {
+      return exists(/databases/$(database)/documents/saas_cards/$(cardId))
+        && get(/databases/$(database)/documents/saas_cards/$(cardId)).data.is_active == true;
+    }
+
+    function ownsCard(cardId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/saas_cards/$(cardId))
+        && get(/databases/$(database)/documents/saas_cards/$(cardId)).data.user_id == request.auth.uid;
+    }
+
+    // Lectura privada: el dueño de la tarjeta o alguien de su misma agencia
+    function canReadPrivateCard(cardId) {
+      return ownsCard(cardId)
+        || (exists(/databases/$(database)/documents/saas_cards/$(cardId))
+            && sameAgencyAs(get(/databases/$(database)/documents/saas_cards/$(cardId)).data.user_id));
+    }
+
+    function isText(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function isEmail(value) {
+      return value is string && value.size() <= 254 && value.matches('.+@.+\\..+');
+    }
+
+    function validCard(d) {
+      return isText(d.title, 120)
+        && isText(d.headline, 2000)
+        && isText(d.slug, 60)
+        && d.branding_settings is map
+        && d.contact_settings is map
+        && d.is_active is bool;
+    }
+
     // Tarjetas: cualquiera puede verlas, solo un administrador puede crearlas o editarlas
     match /cards/{cardId} {
       allow read: if true;
@@ -33,6 +98,129 @@ service cloud.firestore {
     // Perfil del usuario del panel (nombre, empresa): cada quien solo lee y escribe el suyo
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Perfiles: cada quien lee el suyo y el de su agencia. Rol, plan, agencia y correo
+    // solo los cambia el sistema, nunca el propio usuario.
+    match /saas_profiles/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || sameAgencyAs(uid));
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == 'consultant'
+        && request.resource.data.plan_tier == 'consultant'
+        && request.resource.data.agency_id == null
+        && isText(request.resource.data.full_name, 120);
+      allow update: if signedIn()
+        && (request.auth.uid == uid || isAgencyAdminOf(uid))
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.plan_tier == resource.data.plan_tier
+        && request.resource.data.agency_id == resource.data.agency_id;
+      allow delete: if false;
+    }
+
+    // Tarjetas maestras. Lectura pública solo si están activas (las consultas por slug
+    // deben incluir where('is_active', '==', true)).
+    match /saas_cards/{cardId} {
+      allow read: if resource.data.is_active == true || canReadPrivateCard(cardId);
+      allow create: if signedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && validCard(request.resource.data);
+      allow update: if ownsCard(cardId)
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.slug == resource.data.slug
+        && validCard(request.resource.data);
+      allow delete: if ownsCard(cardId);
+    }
+
+    // Catálogo de servicios. Los de la bóveda VIP (is_vip_only) no se muestran al público.
+    match /saas_services/{serviceId} {
+      allow read: if (resource.data.is_vip_only == false && cardIsActive(resource.data.card_id))
+        || canReadPrivateCard(resource.data.card_id);
+      allow create: if ownsCard(request.resource.data.card_id)
+        && isText(request.resource.data.title, 120)
+        && isText(request.resource.data.description, 2000)
+        && request.resource.data.is_vip_only is bool;
+      allow update: if ownsCard(resource.data.card_id)
+        && request.resource.data.card_id == resource.data.card_id;
+      allow delete: if ownsCard(resource.data.card_id);
+    }
+
+    // Casos de éxito
+    match /saas_testimonials/{testimonialId} {
+      allow read: if cardIsActive(resource.data.card_id) || canReadPrivateCard(resource.data.card_id);
+      allow create: if ownsCard(request.resource.data.card_id)
+        && isText(request.resource.data.client_name, 120)
+        && isText(request.resource.data.quote, 2000);
+      allow update: if ownsCard(resource.data.card_id)
+        && request.resource.data.card_id == resource.data.card_id;
+      allow delete: if ownsCard(resource.data.card_id);
+    }
+
+    // Enlaces de prospecto. No guardan secretos: la contraseña de la bóveda y su contenido
+    // viven en saas_prospect_link_secrets, que nadie puede leer excepto el dueño.
+    match /saas_prospect_links/{linkId} {
+      allow read: if (resource.data.is_active == true && cardIsActive(resource.data.card_id))
+        || canReadPrivateCard(resource.data.card_id);
+      allow create: if ownsCard(request.resource.data.card_id)
+        && isText(request.resource.data.prospect_company_name, 120)
+        && isText(request.resource.data.tailored_headline, 2000)
+        && request.resource.data.vip_vault_enabled is bool;
+      allow update: if ownsCard(resource.data.card_id)
+        && request.resource.data.card_id == resource.data.card_id
+        && request.resource.data.unique_slug == resource.data.unique_slug;
+      allow delete: if ownsCard(resource.data.card_id);
+    }
+
+    // Secretos de un enlace de prospecto: hash de la bóveda y precios confidenciales.
+    // Solo el dueño de la tarjeta; ni siquiera su agencia.
+    match /saas_prospect_link_secrets/{linkId} {
+      allow read: if ownsCard(resource.data.card_id);
+      allow create: if ownsCard(request.resource.data.card_id);
+      allow update: if ownsCard(resource.data.card_id)
+        && request.resource.data.card_id == resource.data.card_id;
+      allow delete: if ownsCard(resource.data.card_id);
+    }
+
+    // Reservas de slugs únicos: el id del documento es el slug. Crear uno que ya existe falla,
+    // así que dos tarjetas no pueden quedarse con el mismo enlace.
+    match /saas_slugs/{slugId} {
+      allow read: if signedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if signedIn()
+        && !exists(/databases/$(database)/documents/saas_slugs/$(slugId))
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.kind in ['card', 'prospect_link'];
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.user_id == request.auth.uid;
+    }
+
+    // Cotizaciones. Cualquiera puede enviar una a una tarjeta activa; solo el dueño las lee
+    // y solo puede cambiar el estado.
+    match /saas_quotes/{quoteId} {
+      allow read: if ownsCard(resource.data.card_id);
+      allow create: if cardIsActive(request.resource.data.card_id)
+        && request.resource.data.status == 'new'
+        && isText(request.resource.data.prospect_name, 120)
+        && isEmail(request.resource.data.prospect_email)
+        && request.resource.data.status in ['new', 'contacted', 'in_negotiation', 'closed', 'discarded']
+        && (request.resource.data.get('message', null) == null
+            || (request.resource.data.message is string && request.resource.data.message.size() <= 2000));
+      allow update: if ownsCard(resource.data.card_id)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['new', 'contacted', 'in_negotiation', 'closed', 'discarded'];
+      allow delete: if ownsCard(resource.data.card_id);
+    }
+
+    // Analíticas. Cualquiera registra eventos de una tarjeta activa; solo el dueño o su
+    // agencia leen las métricas. Los eventos no se modifican.
+    match /saas_analytics_events/{eventId} {
+      allow read: if canReadPrivateCard(resource.data.card_id);
+      allow create: if cardIsActive(request.resource.data.card_id)
+        && request.resource.data.event_type in ['page_view', 'service_expanded', 'vip_unlocked', 'quote_submitted', 'whatsapp_clicked', 'calendar_clicked', 'vcard_downloaded']
+        && request.resource.data.metadata is map;
+      allow update: if false;
+      allow delete: if ownsCard(resource.data.card_id);
     }
 
     // Prueba de conexión: solo lectura

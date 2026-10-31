@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import { safeRedirectPath } from "./validation";
+import { ensureProfile } from "../../lib/db/profileService";
 
 /** Pantalla de carga centrada con la paleta de la marca mientras Firebase resuelve la sesión. */
 export function AuthLoading() {
@@ -19,6 +21,11 @@ export function AuthLoading() {
 export function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+
+  // Sincroniza el perfil de la capa de datos al entrar; no hace nada si ya existe
+  useEffect(() => {
+    if (user) ensureProfile(user).catch(() => {});
+  }, [user]);
 
   if (isLoading) return <AuthLoading />;
 

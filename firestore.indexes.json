@@ -1,0 +1,64 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "saas_cards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saas_services",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "card_id", "order": "ASCENDING" },
+        { "fieldPath": "is_vip_only", "order": "ASCENDING" },
+        { "fieldPath": "order_index", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saas_prospect_links",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "card_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saas_quotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "card_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saas_quotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "card_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saas_analytics_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "card_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saas_analytics_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "card_id", "order": "ASCENDING" },
+        { "fieldPath": "event_type", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
