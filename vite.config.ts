@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: './',
+    base: '/',
     build: {
       // Los logotipos oficiales (menos de 48 KB) se incrustan en el JS para que siempre se vean
       assetsInlineLimit: 48 * 1024,
@@ -14,6 +14,7 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@panel': path.resolve(__dirname, 'src/panel'),
       },
     },
     server: {

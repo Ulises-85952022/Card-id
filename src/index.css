@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./panel/panel.css";
 
 /* Paleta corporativa AMMEGA: teal del logotipo y verde lima del catálogo oficial (09.2025).
    El lima solo va sobre teal: sobre blanco no tiene contraste. */
