@@ -23,9 +23,9 @@ export const BRAND_DOCUMENTS: Record<string, BrandDocument[]> = {
     {
       title: 'Guía para configurar tu banda',
       description:
-        'Esquemas de medidas para pedir perforaciones, perfiles y empujadores, olanes o loops. Llénala y envíala con tu cotización.',
+        'Esquemas para configurar tu banda (perforaciones, perfiles, empujadores, olanes y loops), cómo medir una banda instalada, guías lado polea y tipos de unión. Llénala y envíala con tu cotización.',
       url: '/docs/guia-configuracion-bandas.pdf',
-      meta: 'PDF · 2 págs.',
+      meta: 'PDF · 5 págs.',
     },
   ],
   megadyne: [
