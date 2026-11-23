@@ -52,7 +52,7 @@ export const BRANDS: BrandInfo[] = [
         title: 'Bandas Modulares',
         description:
           'Accionamiento positivo, bajo ruido y larga duración. Se arman en patrón de ladrillo a casi cualquier largo y ancho, con accesorios para cada aplicación.',
-        linkUrl: 'https://bit.ly/3IcqWMk?r=qr',
+        linkUrl: 'https://saammwebdamprodeu.blob.core.windows.net/datasheet/deac1ae0-5fe2-465a-9314-638534bcba5c?sv=2026-02-06&spr=https&st=2026-11-23T04%3A11%3A15Z&se=2026-11-23T05%3A11%3A15Z&sr=b&sp=r&sig=ThXA6jMfM6CCGifZREyJp6Cn%2F035C9aZe8X4hJ4xj7w%3D&rscc=private%2C%20max-age%3D3600&rscd=inline&rsct=application%2Fpdf',
       },
       {
         id: 'ab-sinteticas',
